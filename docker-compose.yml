@@ -1,0 +1,106 @@
+services:
+  # PHP-FPM – kod aplikacji Laravel. Przygotowuje środowisko (vendor, migracje, seed).
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: serwisit/app:latest
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - serwisit
+
+  # Nginx – jedyny kontener wystawiony na host (port 7564).
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "7564:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - serwisit
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-serwisit}
+      POSTGRES_USER: ${DB_USERNAME:-serwisit}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-serwisit} -d ${DB_DATABASE:-serwisit}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - serwisit
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - serwisit
+
+  # Worker kolejek Laravel – czeka aż app zainstaluje vendor.
+  queue:
+    image: serwisit/app:latest
+    restart: unless-stopped
+    working_dir: /var/www/html
+    entrypoint: ["sh", "-c"]
+    command: ["until [ -f vendor/autoload.php ]; do sleep 2; done; php artisan queue:work --sleep=3 --tries=3 --max-time=3600"]
+    volumes:
+      - ./:/var/www/html
+    env_file:
+      - .env
+    depends_on:
+      - app
+      - redis
+    networks:
+      - serwisit
+
+  # Scheduler Laravel (odpowiednik crona).
+  scheduler:
+    image: serwisit/app:latest
+    restart: unless-stopped
+    working_dir: /var/www/html
+    entrypoint: ["sh", "-c"]
+    command: ["until [ -f vendor/autoload.php ]; do sleep 2; done; php artisan schedule:work"]
+    volumes:
+      - ./:/var/www/html
+    env_file:
+      - .env
+    depends_on:
+      - app
+    networks:
+      - serwisit
+
+networks:
+  serwisit:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

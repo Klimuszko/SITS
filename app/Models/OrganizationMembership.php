@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\ManagerScope;
+use App\Enums\OrgRole;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class OrganizationMembership extends Model
+{
+    protected $fillable = [
+        'user_id',
+        'organization_id',
+        'role',
+        'manager_scope',
+        'is_active',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'role' => OrgRole::class,
+            'manager_scope' => ManagerScope::class,
+            'is_active' => 'boolean',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    public function isManager(): bool
+    {
+        return $this->role === OrgRole::Manager;
+    }
+}
