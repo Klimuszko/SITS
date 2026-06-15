@@ -1,0 +1,46 @@
+# Produkcyjny obraz aplikacji – zawiera kod + zależności (vendor).
+# Serwer docelowy nie potrzebuje źródeł: pobiera gotowy obraz z rejestru (GHCR).
+FROM php:8.3-fpm-alpine
+
+# Rozszerzenia PHP (jak w obrazie dev)
+RUN apk add --no-cache \
+        bash git unzip icu-dev libzip-dev postgresql-dev oniguruma-dev \
+        freetype-dev libjpeg-turbo-dev libpng-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" \
+        pdo_pgsql pgsql intl zip gd bcmath opcache \
+    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .build-deps
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+
+WORKDIR /var/www/html
+
+# 1) Najpierw manifesty – lepsze cache warstw przy instalacji zależności.
+COPY composer.json composer.lock* ./
+RUN if [ -f composer.lock ]; then \
+        composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction; \
+    else \
+        composer update --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction; \
+    fi
+
+# 2) Reszta kodu + finalny autoloader.
+COPY . .
+RUN composer install --no-dev --optimize-autoloader --no-interaction \
+    && rm -rf /var/www/html/tests \
+    && mkdir -p storage/framework/cache/data storage/framework/sessions \
+               storage/framework/views storage/logs \
+               storage/app/public storage/app/private storage/app/purifier bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+COPY docker/php/entrypoint.prod.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 9000
+
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["php-fpm"]

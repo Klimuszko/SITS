@@ -12,3 +12,7 @@ storage/framework/views/*
 !.env.example
 README.md
 docker-compose.yml
+docker-compose.prod.yml
+.github
+.idea
+.vscode

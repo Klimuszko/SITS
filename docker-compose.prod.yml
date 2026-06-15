@@ -1,0 +1,111 @@
+# Produkcja / zdalny serwer – pobiera gotowe obrazy z rejestru (GHCR).
+# Na serwerze potrzebny jest TYLKO ten plik + plik .env (patrz .env.prod.example).
+# Uruchomienie:
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Zmienne APP_IMAGE / NGINX_IMAGE ustaw w .env, np.:
+#   APP_IMAGE=ghcr.io/uzytkownik/sits-app:latest
+#   NGINX_IMAGE=ghcr.io/uzytkownik/sits-nginx:latest
+
+services:
+  # Jednorazowa migracja bazy – pozostałe usługi czekają na jej sukces.
+  migrate:
+    image: ${APP_IMAGE:?ustaw APP_IMAGE w .env}
+    command: php artisan migrate --force
+    restart: "no"
+    env_file: [.env]
+    volumes:
+      - app_storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [serwisit]
+
+  app:
+    image: ${APP_IMAGE:?ustaw APP_IMAGE w .env}
+    restart: unless-stopped
+    env_file: [.env]
+    volumes:
+      - app_storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [serwisit]
+
+  nginx:
+    image: ${NGINX_IMAGE:?ustaw NGINX_IMAGE w .env}
+    restart: unless-stopped
+    ports:
+      - "7564:80"
+    depends_on:
+      - app
+    networks: [serwisit]
+
+  queue:
+    image: ${APP_IMAGE:?ustaw APP_IMAGE w .env}
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    env_file: [.env]
+    volumes:
+      - app_storage:/var/www/html/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [serwisit]
+
+  scheduler:
+    image: ${APP_IMAGE:?ustaw APP_IMAGE w .env}
+    restart: unless-stopped
+    command: php artisan schedule:work
+    env_file: [.env]
+    volumes:
+      - app_storage:/var/www/html/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [serwisit]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-serwisit}
+      POSTGRES_USER: ${DB_USERNAME:-serwisit}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?ustaw DB_PASSWORD w .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-serwisit} -d ${DB_DATABASE:-serwisit}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [serwisit]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [serwisit]
+
+networks:
+  serwisit:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  app_storage:

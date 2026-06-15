@@ -152,6 +152,55 @@ docker/{php, nginx}/
 
 ---
 
+## Wdrożenie na zdalny serwer (z obrazu w GHCR)
+
+Idea: obrazy buduje **GitHub Actions** i publikuje do **GitHub Container Registry** (`ghcr.io`). Na serwerze nie ma kodu źródłowego — pobiera on gotowe obrazy. Tryb deweloperski (`docker-compose.yml`) buduje obraz lokalnie i montuje kod; tryb produkcyjny (`docker-compose.prod.yml`) **pobiera** gotowe obrazy z rejestru.
+
+Publikowane są dwa obrazy:
+- `ghcr.io/<owner>/<repo>-app` — PHP-FPM z zaszytym kodem i `vendor/`,
+- `ghcr.io/<owner>/<repo>-nginx` — nginx z katalogiem `public/`.
+
+### Krok 1 — wypchnij repo na GitHub (jednorazowo)
+
+```bash
+git remote add origin https://github.com/<owner>/<repo>.git
+git push -u origin main
+```
+
+Po push workflow [.github/workflows/publish.yml](.github/workflows/publish.yml) automatycznie zbuduje i wypchnie obrazy (zakładka **Actions**). Tagi obrazów: `latest` (gałąź main), `sha-xxxxxxx`, oraz `v1.2.3` / `1.2` przy tagach wersji.
+
+### Krok 2 — ustaw obrazy jako publiczne (jednorazowo)
+
+W GitHub: **profil/organizacja → Packages → `<repo>-app`** → *Package settings* → *Change visibility* → **Public**. To samo dla `<repo>-nginx`. Dzięki temu serwer pobiera obrazy bez logowania.
+
+> Obraz prywatny? Pomiń krok 2 i zaloguj się na serwerze:
+> `echo <TOKEN_read:packages> | docker login ghcr.io -u <owner> --password-stdin`
+
+### Krok 3 — instalacja na serwerze
+
+Na serwerze (z Dockerem) wystarczą **dwa pliki**: `docker-compose.prod.yml` i `.env`.
+
+```bash
+# 1. Skopiuj docker-compose.prod.yml na serwer, obok niego utwórz .env:
+cp .env.prod.example .env      # i uzupełnij wartości (APP_IMAGE, NGINX_IMAGE, hasła)
+
+# 2. Wygeneruj klucz aplikacji i wklej go do .env jako APP_KEY=
+docker compose -f docker-compose.prod.yml run --rm app php artisan key:generate --show
+
+# 3. Pobierz obrazy i uruchom (migracje wykona jednorazowy serwis "migrate")
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+
+# 4. Utwórz konto Super Admina (dane z .env: SUPERADMIN_*)
+docker compose -f docker-compose.prod.yml run --rm app php artisan db:seed --class=SuperAdminSeeder --force
+```
+
+Portal: `http://ADRES_SERWERA:7564`. Aktualizacja wersji: `docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d` (serwis `migrate` zastosuje nowe migracje).
+
+> W produkcji **nie** uruchamiamy pełnego `db:seed` (zawiera dane demo). Seedujemy tylko `SuperAdminSeeder`. `APP_DEBUG=false`, `APP_KEY` ustawione, silne hasła w `.env`.
+
+---
+
 ## Roadmapa (kolejne iteracje)
 
 UI modułów: Tickety (z `TicketService`), Zasoby z dynamicznymi polami i relacjami, Baza wiedzy (edytor WYSIWYG + sanityzacja), Prace administracyjne + raport miesięczny, panel Audytu, zarządzanie użytkownikami/lokalizacjami/grupami, pełne testy feature reguł dostępu.
