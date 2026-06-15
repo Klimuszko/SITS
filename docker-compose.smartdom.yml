@@ -1,0 +1,190 @@
+# ============================================================================
+# SerwisIT – indywidualny stack dla środowiska smart-dom (Synology + Traefik).
+#
+# - Główny kontener (nginx) jest w sieci VLAN50_Docker pod 10.10.50.19
+#   i wystawiony przez Traefik jako https://serwisit.smart-dom.it
+# - Pozostałe usługi (php, postgres, redis, queue, scheduler) siedzą na
+#   wewnętrznej sieci bridge "serwisit_internal" (nie zużywają IP z VLAN-a).
+# - nginx jest multi-homed (VLAN50 + internal), żeby mógł gadać z "app".
+#
+# PRZED URUCHOMIENIEM uzupełnij 3 wartości oznaczone "# ZMIEN":
+#   APP_KEY, DB_PASSWORD (w dwóch miejscach – muszą być identyczne!),
+#   SUPERADMIN_PASSWORD.
+# APP_KEY wygeneruj:  docker run --rm ghcr.io/klimuszko/sits-app:latest php artisan key:generate --show
+# ============================================================================
+
+x-app-env: &app-env
+  APP_NAME: "SerwisIT"
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  APP_KEY: "base64:WSTAW_WYGENEROWANY_KLUCZ"      # ZMIEN
+  APP_URL: "https://serwisit.smart-dom.it"
+  APP_LOCALE: "pl"
+  APP_FALLBACK_LOCALE: "en"
+  APP_TIMEZONE: "Europe/Warsaw"
+  SUPERADMIN_NAME: "Super Admin"
+  SUPERADMIN_EMAIL: "piotr.klimaszewski@smartintegracje.pl"
+  SUPERADMIN_PASSWORD: "ZMIEN_HASLO_ADMINA"        # ZMIEN
+  DB_CONNECTION: "pgsql"
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_DATABASE: "serwisit"
+  DB_USERNAME: "serwisit"
+  DB_PASSWORD: "ZMIEN_SILNE_HASLO_BAZY"            # ZMIEN (musi == POSTGRES_PASSWORD)
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_CLIENT: "phpredis"
+  CACHE_STORE: "redis"
+  QUEUE_CONNECTION: "redis"
+  SESSION_DRIVER: "redis"
+  FILESYSTEM_DISK: "local"
+  MAIL_MAILER: "log"
+
+services:
+  # Jednorazowa migracja bazy – pozostałe usługi czekają na jej sukces.
+  migrate:
+    image: ghcr.io/klimuszko/sits-app:latest
+    container_name: serwisit-migrate
+    command: php artisan migrate --force
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    environment: *app-env
+    volumes:
+      - serwisit_storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [serwisit_internal]
+
+  app:
+    image: ghcr.io/klimuszko/sits-app:latest
+    container_name: serwisit-app
+    hostname: serwisit-app
+    restart: unless-stopped
+    mem_limit: 1024MB
+    mem_reservation: 384MB
+    security_opt: [no-new-privileges:true]
+    environment: *app-env
+    volumes:
+      - serwisit_storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [serwisit_internal]
+
+  # GŁÓWNY kontener – tu wchodzisz (VLAN50: 10.10.50.19 + Traefik).
+  nginx:
+    image: ghcr.io/klimuszko/sits-nginx:latest
+    container_name: serwisit-nginx
+    hostname: serwisit
+    restart: unless-stopped
+    mem_limit: 256MB
+    mem_reservation: 64MB
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/up || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 360s
+    depends_on:
+      - app
+    networks:
+      VLAN50_Docker:
+        ipv4_address: 10.10.50.19
+      serwisit_internal:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=VLAN50_Docker
+      - traefik.http.routers.serwisit.rule=Host(`serwisit.smart-dom.it`)
+      - traefik.http.routers.serwisit.entrypoints=websecure
+      - traefik.http.routers.serwisit.tls=true
+      - traefik.http.routers.serwisit.tls.certresolver=cloudflare
+      - traefik.http.services.serwisit.loadbalancer.server.port=80
+
+  queue:
+    image: ghcr.io/klimuszko/sits-app:latest
+    container_name: serwisit-queue
+    restart: unless-stopped
+    mem_limit: 768MB
+    mem_reservation: 256MB
+    security_opt: [no-new-privileges:true]
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    environment: *app-env
+    volumes:
+      - serwisit_storage:/var/www/html/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [serwisit_internal]
+
+  scheduler:
+    image: ghcr.io/klimuszko/sits-app:latest
+    container_name: serwisit-scheduler
+    restart: unless-stopped
+    mem_limit: 256MB
+    mem_reservation: 64MB
+    security_opt: [no-new-privileges:true]
+    command: php artisan schedule:work
+    environment: *app-env
+    volumes:
+      - serwisit_storage:/var/www/html/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [serwisit_internal]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: serwisit-db
+    restart: unless-stopped
+    mem_limit: 1024MB
+    mem_reservation: 256MB
+    security_opt: [no-new-privileges:true]
+    environment:
+      POSTGRES_DB: "serwisit"
+      POSTGRES_USER: "serwisit"
+      POSTGRES_PASSWORD: "ZMIEN_SILNE_HASLO_BAZY"   # ZMIEN (musi == DB_PASSWORD wyżej)
+      TZ: "Europe/Warsaw"
+    volumes:
+      - serwisit_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U serwisit -d serwisit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [serwisit_internal]
+
+  redis:
+    image: redis:7-alpine
+    container_name: serwisit-redis
+    restart: unless-stopped
+    mem_limit: 512MB
+    mem_reservation: 128MB
+    security_opt: [no-new-privileges:true]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - serwisit_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [serwisit_internal]
+
+networks:
+  VLAN50_Docker:
+    external: true
+  serwisit_internal:
+    driver: bridge
+
+volumes:
+  serwisit_db:
+  serwisit_redis:
+  serwisit_storage:

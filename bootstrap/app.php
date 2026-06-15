@@ -12,6 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Za reverse proxy (np. Traefik) ufamy nagłówkom X-Forwarded-*,
+        // aby poprawnie wykrywać HTTPS oraz realne IP klienta
+        // (rate limiting logowania, audyt). Aplikacja jest wystawiana wyłącznie
+        // przez zaufany proxy w sieci wewnętrznej.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
         ]);
