@@ -206,3 +206,10 @@ Portal: `http://ADRES_SERWERA:7564`. Aktualizacja wersji: `docker compose -f doc
 UI modułów: Tickety (z `TicketService`), Zasoby z dynamicznymi polami i relacjami, Baza wiedzy (edytor WYSIWYG + sanityzacja), Prace administracyjne + raport miesięczny, panel Audytu, zarządzanie użytkownikami/lokalizacjami/grupami, pełne testy feature reguł dostępu.
 
 Zaprojektowane pod późniejsze dodanie (nie w MVP): e-mail→ticket, Microsoft 365 / Entra ID, Teams webhook, LDAP/AD, SSO, eksport PDF/CSV, SLA, reverse proxy + HTTPS.
+
+---
+
+## Licencja
+
+Oprogramowanie **zastrzeżone (proprietary), wszelkie prawa zastrzeżone** — patrz [LICENSE](LICENSE).
+Kod jest upubliczniony wyłącznie do wglądu. **Bez pisemnej zgody właściciela zabronione jest** używanie, kopiowanie, modyfikowanie, rozpowszechnianie, sprzedaż oraz jakiekolwiek czerpanie korzyści. To restrykcja prawna, nie techniczna — publiczny kod można technicznie podejrzeć, ale jego użycie bez zgody narusza prawo autorskie.

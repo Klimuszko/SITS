@@ -1,0 +1,81 @@
+SerwisIT — Licencja zastrzeżona / Proprietary License
+======================================================
+
+Copyright (c) 2026 [TWOJE IMIĘ I NAZWISKO LUB NAZWA FIRMY]. Wszelkie prawa zastrzeżone. / All Rights Reserved.
+
+--------------------------------------------------------------------------------
+WERSJA POLSKA
+--------------------------------------------------------------------------------
+
+Niniejsze oprogramowanie wraz z całym kodem źródłowym, plikami, dokumentacją,
+konfiguracją oraz obrazami kontenerów (dalej: „Oprogramowanie") stanowi wyłączną
+własność posiadacza praw autorskich wskazanego powyżej i jest chronione prawem
+autorskim oraz umowami międzynarodowymi.
+
+Oprogramowanie zostało upublicznione (np. w publicznym repozytorium lub rejestrze
+obrazów) WYŁĄCZNIE w celu wglądu. Upublicznienie NIE oznacza udzielenia
+jakiejkolwiek licencji ani zrzeczenia się jakichkolwiek praw.
+
+ZABRONIONE jest — bez uprzedniej, wyraźnej, pisemnej zgody posiadacza praw —
+w szczególności:
+  1. używanie Oprogramowania w jakimkolwiek celu (komercyjnym i niekomercyjnym),
+     w tym uruchamianie go produkcyjnie;
+  2. kopiowanie, zwielokrotnianie i pobieranie inne niż techniczny wgląd;
+  3. modyfikowanie, tłumaczenie, adaptowanie i tworzenie utworów zależnych;
+  4. rozpowszechnianie, publikowanie, udostępnianie, najem, dzierżawa, sprzedaż
+     lub jakiekolwiek czerpanie korzyści majątkowych;
+  5. sublicencjonowanie oraz przekazywanie osobom trzecim;
+  6. udostępnianie jako usługa (hosting / SaaS);
+  7. usuwanie lub zmienianie niniejszej noty o prawach autorskich.
+
+DOZWOLONE jest wyłącznie: przeglądanie kodu źródłowego w celu osobistej oceny.
+
+Każde użycie wykraczające poza powyższe wymaga odrębnej, pisemnej umowy
+licencyjnej z posiadaczem praw.
+
+--------------------------------------------------------------------------------
+ENGLISH VERSION
+--------------------------------------------------------------------------------
+
+This software, together with all of its source code, files, documentation,
+configuration, and container images (the "Software"), is the exclusive property
+of the copyright holder named above and is protected by copyright law and
+international treaties.
+
+The Software has been made publicly visible (e.g. in a public repository or image
+registry) FOR VIEWING PURPOSES ONLY. Public availability does NOT grant any
+license and does NOT waive any rights.
+
+WITHOUT the prior explicit written permission of the copyright holder, it is
+PROHIBITED to, among other things:
+  1. use the Software for any purpose (commercial or non-commercial), including
+     running it in production;
+  2. copy, reproduce, or download it other than for technical viewing;
+  3. modify, translate, adapt, or create derivative works;
+  4. distribute, publish, share, rent, lease, sell, or otherwise commercially
+     exploit it;
+  5. sublicense or transfer it to third parties;
+  6. provide it as a service (hosting / SaaS);
+  7. remove or alter this copyright notice.
+
+PERMITTED only: viewing the source code for the sole purpose of personal
+evaluation.
+
+Any use beyond the above requires a separate, written license agreement with the
+copyright holder.
+
+--------------------------------------------------------------------------------
+WYŁĄCZENIE ODPOWIEDZIALNOŚCI / DISCLAIMER
+--------------------------------------------------------------------------------
+
+OPROGRAMOWANIE JEST DOSTARCZANE „TAK JAK JEST", BEZ JAKIEJKOLWIEK GWARANCJI,
+WYRAŹNEJ LUB DOROZUMIANEJ. W ŻADNYM WYPADKU POSIADACZ PRAW NIE PONOSI
+ODPOWIEDZIALNOŚCI ZA JAKIEKOLWIEK ROSZCZENIA, SZKODY LUB INNE ZOBOWIĄZANIA.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES
+OR OTHER LIABILITY.
+
+--------------------------------------------------------------------------------
+Kontakt w sprawie licencji / Licensing inquiries: [adres e-mail]
+--------------------------------------------------------------------------------

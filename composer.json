@@ -3,7 +3,7 @@
     "type": "project",
     "description": "SerwisIT – helpdesk, CMDB, baza wiedzy i prace administracyjne dla firmy IT.",
     "keywords": ["laravel", "helpdesk", "cmdb", "itsm"],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.3",
         "laravel/framework": "^12.0",
