@@ -110,6 +110,8 @@ return [
         'asset.created' => 'Asset created',
         'asset.updated' => 'Asset updated',
         'asset.archived' => 'Asset archived',
+        'location.created' => 'Location created',
+        'location.updated' => 'Location updated',
         'attachment.added' => 'Attachment added',
         'article.visibility_changed' => 'Article visibility changed',
         'work_log.created' => 'Administrative work log created',

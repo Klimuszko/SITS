@@ -6,6 +6,7 @@ use App\Models\AdministrativeWorkLog;
 use App\Models\Asset;
 use App\Models\Attachment;
 use App\Models\KnowledgeArticle;
+use App\Models\Location;
 use App\Models\Organization;
 use App\Models\Ticket;
 use App\Models\User;
@@ -13,6 +14,7 @@ use App\Policies\AdministrativeWorkLogPolicy;
 use App\Policies\AssetPolicy;
 use App\Policies\AttachmentPolicy;
 use App\Policies\KnowledgeArticlePolicy;
+use App\Policies\LocationPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\TicketPolicy;
 use Illuminate\Support\Facades\Gate;
@@ -25,6 +27,7 @@ class AuthServiceProvider extends ServiceProvider
         Organization::class => OrganizationPolicy::class,
         Ticket::class => TicketPolicy::class,
         Asset::class => AssetPolicy::class,
+        Location::class => LocationPolicy::class,
         AdministrativeWorkLog::class => AdministrativeWorkLogPolicy::class,
         KnowledgeArticle::class => KnowledgeArticlePolicy::class,
         Attachment::class => AttachmentPolicy::class,

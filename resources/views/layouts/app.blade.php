@@ -20,6 +20,7 @@
                 <a href="{{ route('tickets.index') }}" wire:navigate class="{{ request()->routeIs('tickets.*') ? 'active' : '' }}">Zgłoszenia</a>
                 <a href="{{ route('organizations.index') }}" wire:navigate class="{{ request()->routeIs('organizations.*') ? 'active' : '' }}">Organizacje</a>
                 <a href="{{ route('assets.index') }}" wire:navigate class="{{ request()->routeIs('assets.*') ? 'active' : '' }}">Zasoby</a>
+                <a href="{{ route('locations.index') }}" wire:navigate class="{{ request()->routeIs('locations.*') ? 'active' : '' }}">Lokalizacje</a>
 
                 {{-- Moduły w przygotowaniu (schemat i policies gotowe) --}}
                 <span class="nav__disabled">Baza wiedzy <small>· wkrótce</small></span>

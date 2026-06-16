@@ -8,6 +8,8 @@ use App\Livewire\Assets\ManageForm as AssetForm;
 use App\Livewire\Assets\Show as AssetShow;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard;
+use App\Livewire\Locations\Index as LocationIndex;
+use App\Livewire\Locations\ManageForm as LocationForm;
 use App\Livewire\Organizations\Index as OrganizationIndex;
 use App\Livewire\Organizations\ManageForm as OrganizationForm;
 use App\Livewire\Tickets\Create as TicketCreate;
@@ -45,6 +47,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/zasoby/nowy', AssetForm::class)->name('assets.create');
     Route::get('/zasoby/{asset}', AssetShow::class)->name('assets.show');
     Route::get('/zasoby/{asset}/edycja', AssetForm::class)->name('assets.edit');
+
+    // Lokalizacje. Autoryzacja w mount() komponentów (policy LocationPolicy);
+    // celowo BEZ middleware role: — support musi mieć dostęp.
+    Route::get('/lokalizacje', LocationIndex::class)->name('locations.index');
+    Route::get('/lokalizacje/nowa', LocationForm::class)->name('locations.create');
+    Route::get('/lokalizacje/{location}/edycja', LocationForm::class)->name('locations.edit');
 
     // Organizacje – zarządzanie (admin) + podgląd (zakres wg policy/scoping).
     Route::get('/organizacje', OrganizationIndex::class)->name('organizations.index');

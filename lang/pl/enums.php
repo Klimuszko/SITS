@@ -109,6 +109,8 @@ return [
         'asset.created' => 'Utworzono zasób',
         'asset.updated' => 'Zmieniono zasób',
         'asset.archived' => 'Zarchiwizowano zasób',
+        'location.created' => 'Utworzono lokalizację',
+        'location.updated' => 'Zmieniono lokalizację',
         'attachment.added' => 'Dodano załącznik',
         'article.visibility_changed' => 'Zmieniono widoczność artykułu',
         'work_log.created' => 'Utworzono pracę administracyjną',
