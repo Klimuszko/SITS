@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\Ticket;
 use App\Models\TicketComment;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,36 +25,54 @@ class TicketService
      */
     public function create(User $requester, Organization $organization, array $data): Ticket
     {
-        return DB::transaction(function () use ($requester, $organization, $data) {
-            $primarySupportId = $organization->default_support_user_id
-                ?? $organization->supportAssignments()
-                    ->where('is_primary', true)
-                    ->where('is_active', true)
-                    ->value('support_user_id');
+        $primarySupportId = $organization->default_support_user_id
+            ?? $organization->supportAssignments()
+                ->where('is_primary', true)
+                ->where('is_active', true)
+                ->value('support_user_id');
 
-            $ticket = Ticket::create([
-                'number' => $this->nextNumber(),
-                'title' => $data['title'],
-                'description' => $data['description'],
-                'requester_id' => $requester->id,
-                'organization_id' => $organization->id,
-                'location_id' => $data['location_id'] ?? null,
-                'asset_id' => $data['asset_id'] ?? null,
-                'assigned_support_id' => $primarySupportId,
-                'status' => $primarySupportId ? TicketStatus::Assigned : TicketStatus::New,
-                'ticket_priority_id' => $data['ticket_priority_id'] ?? null,
-                'ticket_category_id' => $data['ticket_category_id'] ?? null,
-                'last_reply_at' => now(),
-            ]);
+        // tickets.number jest UNIQUE, a nextNumber() = count()+1 może się powtórzyć
+        // przy współbieżnym tworzeniu. Pętla ponawiająca otacza CAŁĄ transakcję, więc
+        // każda próba to świeża transakcja: kolizja (UniqueConstraintViolationException)
+        // czysto wycofuje próbę, a kolejna re-BEGIN-uje i przelicza nextNumber().
+        // Na PostgreSQL ponawianie WEWNĄTRZ transakcji nie zadziała – po 23505 cała
+        // transakcja przechodzi w stan aborted (25P02). Działa na PostgreSQL i SQLite.
+        $maxAttempts = 5;
 
-            AuditLogger::log(AuditAction::TicketCreated, $ticket, null, [
-                'number' => $ticket->number,
-                'organization_id' => $organization->id,
-                'assigned_support_id' => $primarySupportId,
-            ]);
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return DB::transaction(function () use ($requester, $organization, $data, $primarySupportId) {
+                    $ticket = Ticket::create([
+                        'number' => $this->nextNumber(),
+                        'title' => $data['title'],
+                        'description' => $data['description'],
+                        'requester_id' => $requester->id,
+                        'organization_id' => $organization->id,
+                        'location_id' => $data['location_id'] ?? null,
+                        'asset_id' => $data['asset_id'] ?? null,
+                        'assigned_support_id' => $primarySupportId,
+                        'status' => $primarySupportId ? TicketStatus::Assigned : TicketStatus::New,
+                        'ticket_priority_id' => $data['ticket_priority_id'] ?? null,
+                        'ticket_category_id' => $data['ticket_category_id'] ?? null,
+                        'last_reply_at' => now(),
+                    ]);
 
-            return $ticket;
-        });
+                    AuditLogger::log(AuditAction::TicketCreated, $ticket, null, [
+                        'number' => $ticket->number,
+                        'organization_id' => $organization->id,
+                        'assigned_support_id' => $primarySupportId,
+                    ]);
+
+                    return $ticket;
+                });
+            } catch (UniqueConstraintViolationException $e) {
+                if ($attempt >= $maxAttempts) {
+                    throw $e;
+                }
+                // Numer zajęty przez równoległy zapis – kolejna iteracja to świeża
+                // transakcja, która przeliczy nextNumber() i ponowi INSERT.
+            }
+        }
     }
 
     /** Zmiana statusu z zapisem dat i audytem. */
@@ -90,7 +109,7 @@ class TicketService
 
         $ticket->forceFill(['last_reply_at' => now()])->save();
 
-        AuditLogger::log('ticket.close_requested', $ticket, null, ['reason' => $reason]);
+        AuditLogger::log(AuditAction::TicketCloseRequested, $ticket, null, ['reason' => $reason]);
 
         return $comment;
     }

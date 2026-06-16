@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\HomeController;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard;
 use App\Livewire\Organizations\Index as OrganizationIndex;
@@ -8,12 +10,9 @@ use App\Livewire\Organizations\ManageForm as OrganizationForm;
 use App\Livewire\Tickets\Create as TicketCreate;
 use App\Livewire\Tickets\Index as TicketIndex;
 use App\Livewire\Tickets\Show as TicketShow;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return redirect()->route(Auth::check() ? 'dashboard' : 'login');
-});
+Route::get('/', HomeController::class);
 
 /* --------------------------- Uwierzytelnianie --------------------------- */
 
@@ -21,13 +20,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');
 });
 
-Route::post('/logout', function () {
-    Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-
-    return redirect()->route('login');
-})->name('logout')->middleware('auth');
+Route::post('/logout', LogoutController::class)->name('logout')->middleware('auth');
 
 /* ------------------------------ Aplikacja ------------------------------- */
 

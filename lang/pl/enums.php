@@ -105,6 +105,7 @@ return [
         'ticket.assigned' => 'Przypisano ticket',
         'ticket.commented' => 'Dodano komentarz',
         'ticket.internal_note' => 'Dodano notatkę wewnętrzną',
+        'ticket.close_requested' => 'Poproszono o zamknięcie ticketu',
         'asset.created' => 'Utworzono zasób',
         'asset.updated' => 'Zmieniono zasób',
         'asset.archived' => 'Zarchiwizowano zasób',

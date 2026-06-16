@@ -106,6 +106,7 @@ return [
         'ticket.assigned' => 'Ticket assigned',
         'ticket.commented' => 'Comment added',
         'ticket.internal_note' => 'Internal note added',
+        'ticket.close_requested' => 'Ticket close requested',
         'asset.created' => 'Asset created',
         'asset.updated' => 'Asset updated',
         'asset.archived' => 'Asset archived',

@@ -11,8 +11,8 @@ Stack: **Laravel 12 + Livewire 3 + PostgreSQL 16 + Redis 7 + Docker Compose**. I
 Wymagania: **Docker** + **Docker Compose** (wtyczka `docker compose`).
 
 ```bash
-# 1. Skopiuj plik środowiskowy (repo zawiera już gotowy .env dla developmentu)
-cp .env.example .env        # opcjonalnie – .env jest dołączony
+# 1. Utwórz plik środowiskowy (.env jest w .gitignore – nie ma go w repo)
+cp .env.example .env        # wymagane – uzupełnij wartości w razie potrzeby
 
 # 2. Zbuduj i uruchom całość
 docker compose up -d --build
@@ -54,8 +54,10 @@ Dane Super Admina pochodzą z `.env` (`SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD`)
 | `app`       | PHP-FPM 8.3 (kod Laravel)              | —          |
 | `postgres`  | baza danych PostgreSQL 16              | — (tylko sieć wewnętrzna) |
 | `redis`     | cache / kolejki / sesje                | —          |
-| `queue`     | `php artisan queue:work`               | —          |
-| `scheduler` | `php artisan schedule:work`            | —          |
+| `queue`     | `php artisan queue:work` (uśpiony)     | —          |
+| `scheduler` | `php artisan schedule:work` (uśpiony)  | —          |
+
+> **Kontenery `queue` i `scheduler` są obecnie uśpione z założenia (dormant).** Aplikacja nie definiuje jeszcze żadnych zadań w kolejce ani harmonogramie, więc workery działają „na sucho”. Kontenery zostają w stacku, aby aktywować je bez zmian infrastruktury, gdy dojdą funkcje, które ich wymagają: zakładanie ticketów z e-maila (email→ticket), miesięczne raporty prac administracyjnych oraz automatyczne zamykanie rozwiązanych ticketów.
 
 **Dlaczego nginx + php-fpm, a nie `artisan serve`?** To stabilny, produkcyjny model: oddzielny worker kolejek i scheduler współdzielą ten sam obraz, a nginx poprawnie obsługuje pliki statyczne i nagłówki. Zgodnie z MVP **bez Traefik, reverse proxy, domeny i HTTPS** – mapujemy bezpośrednio `7564:80`.
 
@@ -123,10 +125,12 @@ docker compose ps                              # status kontenerów
 docker compose logs -f app                     # logi aplikacji
 docker compose exec app php artisan migrate:fresh --seed   # reset bazy + dane demo
 docker compose exec app php artisan tinker     # konsola
-docker compose exec app php artisan test       # testy
+docker compose exec app php artisan test       # testy (sqlite :memory:)
 docker compose down                            # zatrzymanie (wolumeny zostają)
 docker compose down -v                         # zatrzymanie + usunięcie danych
 ```
+
+> **Bramka testów w CI:** workflow `.github/workflows/publish.yml` ma job `test` (PHP 8.3 + sqlite `:memory:`, `php artisan test`), od którego zależy publikacja obrazów (`needs: test`). Czerwone testy blokują publikację do GHCR.
 
 ---
 

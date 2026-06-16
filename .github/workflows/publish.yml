@@ -14,7 +14,42 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Konfiguracja PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Cache zależności Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock', 'composer.json') }}
+          restore-keys: composer-
+
+      - name: Instalacja zależności
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Przygotowanie środowiska
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Testy (sqlite :memory:)
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+        run: php artisan test
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

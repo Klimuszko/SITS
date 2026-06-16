@@ -21,6 +21,7 @@ enum AuditAction: string
     case TicketAssigned = 'ticket.assigned';
     case TicketCommented = 'ticket.commented';
     case TicketInternalNote = 'ticket.internal_note';
+    case TicketCloseRequested = 'ticket.close_requested';
 
     case AssetCreated = 'asset.created';
     case AssetUpdated = 'asset.updated';

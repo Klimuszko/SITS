@@ -17,7 +17,7 @@ if [ "$1" = "php-fpm" ]; then
     php artisan storage:link 2>/dev/null || true
     php artisan config:cache || true
     php artisan view:cache || true
-    # UWAGA: route:cache pominięte – web.php zawiera trasy-domknięcia (closures).
+    php artisan route:cache || true
 fi
 
 exec "$@"
