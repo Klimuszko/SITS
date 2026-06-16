@@ -55,7 +55,7 @@
                         <select id="support" class="select" wire:model="default_support_user_id">
                             <option value="">— wybierz supporta —</option>
                             @foreach ($supportUsers as $support)
-                                <option value="{{ $support->id }}">{{ $support->name }} ({{ $support->email }})</option>
+                                <option value="{{ $support->id }}">{{ $support->name }} — {{ $support->role->label() }}</option>
                             @endforeach
                         </select>
                         @error('default_support_user_id') <span class="error">{{ $message }}</span> @enderror

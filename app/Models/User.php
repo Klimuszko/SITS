@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\OrgRole;
 use App\Enums\Role;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -124,6 +125,20 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return $this->role->isStaff();
+    }
+
+    /**
+     * Personel systemu (super_admin/admin/support) – kandydaci na supporta organizacji.
+     *
+     * @param  Builder<User>  $query
+     */
+    public function scopeStaff(Builder $query): void
+    {
+        $query->whereIn('role', [
+            Role::SuperAdmin->value,
+            Role::Admin->value,
+            Role::Support->value,
+        ]);
     }
 
     /** Aktywne członkostwo w danej organizacji (lub null). */

@@ -61,9 +61,18 @@ class ManageForm extends Component
             'contact_phone' => ['nullable', 'string', 'max:50'],
             'internal_note' => ['nullable', 'string'],
             // Aktywna organizacja MUSI mieć domyślnego supporta (§6, §9).
+            // Domyślnym supportem może być wyłącznie aktywny członek personelu
+            // (super_admin/admin/support) – klient (manager/user) jest odrzucany.
             'default_support_user_id' => [
                 Rule::requiredIf(fn () => $this->status === OrganizationStatus::Active->value),
-                'nullable', 'integer', 'exists:users,id',
+                'nullable', 'integer',
+                Rule::exists('users', 'id')->where(fn ($q) => $q
+                    ->where('is_active', true)
+                    ->whereIn('role', [
+                        Role::SuperAdmin->value,
+                        Role::Admin->value,
+                        Role::Support->value,
+                    ])),
             ],
         ];
     }
@@ -72,6 +81,7 @@ class ManageForm extends Component
     {
         return [
             'default_support_user_id.required' => 'Aktywna organizacja musi mieć przypisanego domyślnego supporta.',
+            'default_support_user_id.exists' => 'Wybrany użytkownik nie jest aktywnym członkiem personelu.',
             'parent_id.not_in' => 'Organizacja nie może być swoim własnym rodzicem.',
         ];
     }
@@ -131,7 +141,7 @@ class ManageForm extends Component
         return view('livewire.organizations.manage-form', [
             'types' => OrganizationType::options(),
             'statuses' => OrganizationStatus::options(),
-            'supportUsers' => User::where('role', Role::Support->value)->where('is_active', true)->orderBy('name')->get(),
+            'supportUsers' => User::staff()->where('is_active', true)->orderBy('name')->get(),
             'parents' => Organization::query()
                 ->when($this->organization, fn ($q) => $q->whereKeyNot($this->organization->id))
                 ->orderBy('name')->get(),

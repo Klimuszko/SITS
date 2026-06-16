@@ -69,6 +69,21 @@ class TicketServiceTest extends TestCase
         $this->assertSame(TicketStatus::Assigned, $ticket->status);
     }
 
+    public function test_create_auto_assigns_to_super_admin_default_support(): void
+    {
+        $superAdmin = User::factory()->superAdmin()->create();
+        $organization = Organization::factory()->create(['default_support_user_id' => $superAdmin->id]);
+        $requester = User::factory()->create();
+
+        $ticket = $this->service()->create($requester, $organization, [
+            'title' => 'Awaria u właściciela-supporta',
+            'description' => 'SuperAdmin jako domyślny support organizacji.',
+        ]);
+
+        $this->assertSame($superAdmin->id, $ticket->assigned_support_id);
+        $this->assertSame(TicketStatus::Assigned, $ticket->status);
+    }
+
     public function test_create_without_support_sets_status_new(): void
     {
         [$requester, $organization] = $this->requesterAndOrg();
