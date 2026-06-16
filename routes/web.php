@@ -3,6 +3,9 @@
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\HomeController;
+use App\Livewire\Assets\Index as AssetIndex;
+use App\Livewire\Assets\ManageForm as AssetForm;
+use App\Livewire\Assets\Show as AssetShow;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard;
 use App\Livewire\Organizations\Index as OrganizationIndex;
@@ -35,6 +38,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/zgloszenia', TicketIndex::class)->name('tickets.index');
     Route::get('/zgloszenia/nowe', TicketCreate::class)->name('tickets.create');
     Route::get('/zgloszenia/{ticket}', TicketShow::class)->name('tickets.show');
+
+    // Zasoby (CMDB). Autoryzacja w mount() komponentów (policy AssetPolicy);
+    // celowo BEZ middleware role: — support musi mieć dostęp.
+    Route::get('/zasoby', AssetIndex::class)->name('assets.index');
+    Route::get('/zasoby/nowy', AssetForm::class)->name('assets.create');
+    Route::get('/zasoby/{asset}', AssetShow::class)->name('assets.show');
+    Route::get('/zasoby/{asset}/edycja', AssetForm::class)->name('assets.edit');
 
     // Organizacje – zarządzanie (admin) + podgląd (zakres wg policy/scoping).
     Route::get('/organizacje', OrganizationIndex::class)->name('organizations.index');

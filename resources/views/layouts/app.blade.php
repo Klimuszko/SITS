@@ -19,9 +19,9 @@
                 <a href="{{ route('dashboard') }}" wire:navigate class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">Pulpit</a>
                 <a href="{{ route('tickets.index') }}" wire:navigate class="{{ request()->routeIs('tickets.*') ? 'active' : '' }}">Zgłoszenia</a>
                 <a href="{{ route('organizations.index') }}" wire:navigate class="{{ request()->routeIs('organizations.*') ? 'active' : '' }}">Organizacje</a>
+                <a href="{{ route('assets.index') }}" wire:navigate class="{{ request()->routeIs('assets.*') ? 'active' : '' }}">Zasoby</a>
 
                 {{-- Moduły w przygotowaniu (schemat i policies gotowe) --}}
-                <span class="nav__disabled">Zasoby <small>· wkrótce</small></span>
                 <span class="nav__disabled">Baza wiedzy <small>· wkrótce</small></span>
                 <span class="nav__disabled">Prace adm. <small>· wkrótce</small></span>
             </nav>

@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use App\Enums\AssetFieldType;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AssetField extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'asset_category_id',
         'asset_section_id',
