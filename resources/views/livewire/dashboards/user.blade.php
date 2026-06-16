@@ -4,7 +4,7 @@
             <h1>Witaj, {{ auth()->user()->name }}</h1>
             <p>Twoje zgłoszenia i zasoby.</p>
         </div>
-        <span class="nav__disabled btn btn--primary" title="Moduł ticketów w przygotowaniu">+ Nowe zgłoszenie</span>
+        <a href="{{ route('tickets.create') }}" wire:navigate class="btn btn--primary">+ Nowe zgłoszenie</a>
     </div>
 
     <div class="grid grid--3" style="margin-bottom:22px">
@@ -31,7 +31,7 @@
                 @forelse ($myRecentTickets as $ticket)
                     <tr>
                         <td class="muted">{{ $ticket->number }}</td>
-                        <td>{{ $ticket->title }}</td>
+                        <td><a href="{{ route('tickets.show', $ticket) }}" wire:navigate>{{ $ticket->title }}</a></td>
                         <td><span class="badge badge--{{ $ticket->status->color() }}">{{ $ticket->status->label() }}</span></td>
                     </tr>
                 @empty

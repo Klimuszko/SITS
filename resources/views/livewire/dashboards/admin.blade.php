@@ -35,7 +35,7 @@
                 @forelse ($recentTickets as $ticket)
                     <tr>
                         <td class="muted">{{ $ticket->number }}</td>
-                        <td>{{ $ticket->title }}</td>
+                        <td><a href="{{ route('tickets.show', $ticket) }}" wire:navigate>{{ $ticket->title }}</a></td>
                         <td>{{ $ticket->organization?->name }}</td>
                         <td><span class="badge badge--{{ $ticket->status->color() }}">{{ $ticket->status->label() }}</span></td>
                     </tr>
