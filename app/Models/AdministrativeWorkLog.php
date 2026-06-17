@@ -70,6 +70,23 @@ class AdministrativeWorkLog extends Model
         return $this->morphMany(Attachment::class, 'attachable');
     }
 
+    /** Formatuje liczbę minut jako "Xh Ym" (np. 90 → "1h 30m"). */
+    public static function formatDuration(?int $minutes): string
+    {
+        if ($minutes === null) {
+            return '—';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $mins = $minutes % 60;
+
+        return match (true) {
+            $hours > 0 && $mins > 0 => "{$hours}h {$mins}m",
+            $hours > 0 => "{$hours}h",
+            default => "{$mins}m",
+        };
+    }
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', PublicationStatus::Published->value);

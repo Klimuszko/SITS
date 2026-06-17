@@ -24,10 +24,10 @@
                 @endcan
                 <a href="{{ route('assets.index') }}" wire:navigate class="{{ request()->routeIs('assets.*') ? 'active' : '' }}">Zasoby</a>
                 <a href="{{ route('locations.index') }}" wire:navigate class="{{ request()->routeIs('locations.*') ? 'active' : '' }}">Lokalizacje</a>
+                <a href="{{ route('work-logs.index') }}" wire:navigate class="{{ request()->routeIs('work-logs.*') ? 'active' : '' }}">Prace adm.</a>
 
                 {{-- Moduły w przygotowaniu (schemat i policies gotowe) --}}
                 <span class="nav__disabled">Baza wiedzy <small>· wkrótce</small></span>
-                <span class="nav__disabled">Prace adm. <small>· wkrótce</small></span>
             </nav>
 
             <div class="usermenu">

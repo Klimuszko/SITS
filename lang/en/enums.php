@@ -118,6 +118,7 @@ return [
         'attachment.added' => 'Attachment added',
         'article.visibility_changed' => 'Article visibility changed',
         'work_log.created' => 'Administrative work log created',
+        'work_log.updated' => 'Administrative work log updated',
     ],
 
 ];

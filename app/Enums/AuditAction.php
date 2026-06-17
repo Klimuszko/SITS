@@ -36,6 +36,7 @@ enum AuditAction: string
     case AttachmentAdded = 'attachment.added';
     case ArticleVisibilityChanged = 'article.visibility_changed';
     case WorkLogCreated = 'work_log.created';
+    case WorkLogUpdated = 'work_log.updated';
 
     public function label(): string
     {

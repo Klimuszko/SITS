@@ -17,6 +17,9 @@ use App\Livewire\Tickets\Index as TicketIndex;
 use App\Livewire\Tickets\Show as TicketShow;
 use App\Livewire\Users\Index as UserIndex;
 use App\Livewire\Users\ManageForm as UserForm;
+use App\Livewire\WorkLogs\Index as WorkLogIndex;
+use App\Livewire\WorkLogs\ManageForm as WorkLogForm;
+use App\Livewire\WorkLogs\Report as WorkLogReport;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class);
@@ -63,6 +66,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/organizacje/nowa', OrganizationForm::class)->name('organizations.create');
         Route::get('/organizacje/{organization}/edycja', OrganizationForm::class)->name('organizations.edit');
     });
+
+    // Prace administracyjne. Autoryzacja w mount() komponentów (AdministrativeWorkLogPolicy);
+    // celowo BEZ middleware role: — widoczność zależy od roli + flag, nie od samej roli globalnej.
+    // Trasy statyczne (/nowa, /raport) PRZED /{administrativeWorkLog}, żeby nie zostały przechwycone.
+    Route::get('/prace', WorkLogIndex::class)->name('work-logs.index');
+    Route::get('/prace/nowa', WorkLogForm::class)->name('work-logs.create');
+    Route::get('/prace/raport', WorkLogReport::class)->name('work-logs.report');
+    Route::get('/prace/{administrativeWorkLog}/edycja', WorkLogForm::class)->name('work-logs.edit');
 
     // Użytkownicy i członkostwa (admin). Autoryzacja w mount() przez UserPolicy
     // (ochrona Super Admina i konta własnego po stronie komponentu/policy).
