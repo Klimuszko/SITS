@@ -8,6 +8,9 @@ use App\Livewire\Assets\ManageForm as AssetForm;
 use App\Livewire\Assets\Show as AssetShow;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard;
+use App\Livewire\Dictionaries\KnowledgeCategories as DictionaryKnowledgeCategories;
+use App\Livewire\Dictionaries\TicketCategories as DictionaryTicketCategories;
+use App\Livewire\Dictionaries\TicketPriorities as DictionaryTicketPriorities;
 use App\Livewire\Knowledge\Index as KnowledgeIndex;
 use App\Livewire\Knowledge\ManageForm as KnowledgeForm;
 use App\Livewire\Knowledge\Show as KnowledgeShow;
@@ -84,6 +87,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/uzytkownicy', UserIndex::class)->name('users.index');
     Route::get('/uzytkownicy/nowy', UserForm::class)->name('users.create');
     Route::get('/uzytkownicy/{user}/edycja', UserForm::class)->name('users.edit');
+
+    // Słowniki administracyjne (kategorie/priorytety). Autoryzacja w mount()
+    // każdego komponentu przez bramkę manage-categories (admin/super_admin).
+    // Route::redirect (a nie domknięcie) — kompatybilne z route:cache w produkcji.
+    Route::redirect('/slowniki', '/slowniki/kategorie-zgloszen')->name('dictionaries.index');
+    Route::get('/slowniki/kategorie-zgloszen', DictionaryTicketCategories::class)->name('dictionaries.ticket-categories');
+    Route::get('/slowniki/priorytety', DictionaryTicketPriorities::class)->name('dictionaries.ticket-priorities');
+    Route::get('/slowniki/kategorie-wiedzy', DictionaryKnowledgeCategories::class)->name('dictionaries.knowledge-categories');
 
     // Baza wiedzy. Autoryzacja w mount() komponentów (KnowledgeArticlePolicy);
     // celowo BEZ middleware role: — widoczność zależy od reguł, nie od samej roli globalnej.

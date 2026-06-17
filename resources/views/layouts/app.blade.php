@@ -22,6 +22,9 @@
                 @can('manage-users')
                     <a href="{{ route('users.index') }}" wire:navigate class="{{ request()->routeIs('users.*') ? 'active' : '' }}">Użytkownicy</a>
                 @endcan
+                @can('manage-categories')
+                    <a href="{{ route('dictionaries.ticket-categories') }}" wire:navigate class="{{ request()->routeIs('dictionaries.*') ? 'active' : '' }}">Słowniki</a>
+                @endcan
                 <a href="{{ route('assets.index') }}" wire:navigate class="{{ request()->routeIs('assets.*') ? 'active' : '' }}">Zasoby</a>
                 <a href="{{ route('locations.index') }}" wire:navigate class="{{ request()->routeIs('locations.*') ? 'active' : '' }}">Lokalizacje</a>
                 <a href="{{ route('work-logs.index') }}" wire:navigate class="{{ request()->routeIs('work-logs.*') ? 'active' : '' }}">Prace adm.</a>
