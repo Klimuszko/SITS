@@ -11,6 +11,9 @@ enum AssetFieldType: string
     case Boolean = 'boolean';
     case Select = 'select';
     case Textarea = 'textarea';
+    case Ip = 'ip';
+    case Url = 'url';
+    case Email = 'email';
     case File = 'file';
     case Relation = 'relation';
 

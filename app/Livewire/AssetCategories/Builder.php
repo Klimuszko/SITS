@@ -13,17 +13,32 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
-#[Title('Kategoria zasobów — pola i sekcje')]
+#[Title('Kategoria zasobów — struktura, sekcje i pola')]
 class Builder extends Component
 {
     public AssetCategory $assetCategory;
 
-    /* ----------------------------- Sekcje ----------------------------- */
+    /* ------------------------------ Węzły ----------------------------- */
+    // Węzeł = wiersz asset_sections: Sekcja | Podsekcja | Grupa powtarzalna.
+
+    public const KIND_SECTION = 'section';
+    public const KIND_SUBSECTION = 'subsection';
+    public const KIND_GROUP = 'group';
 
     public ?int $editingSectionId = null;
+    public string $sectionKind = self::KIND_SECTION;
     public string $sectionName = '';
     public string $sectionKey = '';
+    public ?int $sectionParentId = null;
     public int $sectionOrder = 0;
+
+    // Konfiguracja grupy powtarzalnej / pod-zasobu (tylko dla KIND_GROUP).
+    public ?int $sectionMinEntries = null;
+    public ?int $sectionMaxEntries = null;
+    public bool $sectionIsTicketLinkable = false;
+    public ?string $sectionTicketLabel = null;
+    public ?int $sectionDisplayFieldId = null;
+    public bool $sectionLinkParentOnSelect = false;
 
     /* ------------------------------ Pola ------------------------------ */
 
@@ -35,10 +50,13 @@ class Builder extends Component
     public bool $fieldIsRequired = false;
     public ?int $fieldSectionId = null;
     public int $fieldOrder = 0;
+    public ?string $fieldPlaceholder = null;
+    public ?string $fieldDefaultValue = null;
+    public ?string $fieldHelp = null;
 
     /**
-     * Typy pól oferowane w builderze — TYLKO te, które renderuje formularz zasobu
-     * (App\Livewire\Assets\ManageForm). file/relation są celowo wyłączone (Known Gaps).
+     * Typy pól oferowane w builderze — TYLKO te, które renderuje/zwaliduje
+     * formularz zasobu (Step 14b). file/relation celowo wyłączone (Known Gaps).
      *
      * @return array<int,string>
      */
@@ -51,7 +69,16 @@ class Builder extends Component
             AssetFieldType::Boolean->value,
             AssetFieldType::Select->value,
             AssetFieldType::Textarea->value,
+            AssetFieldType::Ip->value,
+            AssetFieldType::Url->value,
+            AssetFieldType::Email->value,
         ];
+    }
+
+    /** @return array<int,string> */
+    protected function allowedKinds(): array
+    {
+        return [self::KIND_SECTION, self::KIND_SUBSECTION, self::KIND_GROUP];
     }
 
     public function mount(AssetCategory $assetCategory): void
@@ -61,12 +88,13 @@ class Builder extends Component
         $this->assetCategory = $assetCategory;
     }
 
-    /* ============================ SEKCJE ============================== */
+    /* ============================ WĘZŁY =============================== */
 
     /** @return array<string,mixed> */
     protected function sectionRules(): array
     {
         return [
+            'sectionKind' => ['required', Rule::in($this->allowedKinds())],
             'sectionName' => ['required', 'string', 'max:255'],
             'sectionKey' => [
                 'required', 'string', 'max:255', 'alpha_dash',
@@ -74,8 +102,52 @@ class Builder extends Component
                     ->where('asset_category_id', $this->assetCategory->id)
                     ->ignore($this->editingSectionId),
             ],
+            'sectionParentId' => [
+                // Sekcja musi być top-level; podsekcja/grupa wymaga rodzica.
+                Rule::requiredIf(fn () => $this->sectionKind !== self::KIND_SECTION),
+                'nullable', 'integer',
+                Rule::exists('asset_sections', 'id')
+                    ->where('asset_category_id', $this->assetCategory->id),
+            ],
             'sectionOrder' => ['integer', 'min:0'],
+            // Konfiguracja grupy powtarzalnej.
+            'sectionMinEntries' => ['nullable', 'integer', 'min:0'],
+            'sectionMaxEntries' => ['nullable', 'integer', 'min:1'],
+            'sectionIsTicketLinkable' => ['boolean'],
+            'sectionTicketLabel' => ['nullable', 'string', 'max:255'],
+            'sectionLinkParentOnSelect' => ['boolean'],
+            'sectionDisplayFieldId' => [
+                'nullable', 'integer',
+                // Pole musi należeć do TEGO węzła (grupy), w tej kategorii.
+                Rule::exists('asset_fields', 'id')
+                    ->where('asset_category_id', $this->assetCategory->id)
+                    ->where('asset_section_id', $this->editingSectionId),
+            ],
         ];
+    }
+
+    /** @return array<string,string> */
+    protected function sectionMessages(): array
+    {
+        return [
+            'sectionName.required' => 'Nazwa węzła jest wymagana.',
+            'sectionKey.required' => 'Klucz węzła jest wymagany.',
+            'sectionKey.unique' => 'Węzeł o takim kluczu już istnieje w tej kategorii.',
+            'sectionKey.alpha_dash' => 'Klucz może zawierać tylko litery, cyfry, myślniki i podkreślenia.',
+            'sectionParentId.required' => 'Wybierz węzeł nadrzędny.',
+            'sectionParentId.exists' => 'Wybrany węzeł nadrzędny nie należy do tej kategorii.',
+            'sectionDisplayFieldId.exists' => 'Pole etykietujące musi należeć do tej grupy.',
+        ];
+    }
+
+    public function updatedSectionKind(): void
+    {
+        // Sekcja jest zawsze top-level; czyścimy rodzica przy przełączeniu.
+        if ($this->sectionKind === self::KIND_SECTION) {
+            $this->sectionParentId = null;
+        }
+
+        $this->resetValidation();
     }
 
     public function editSection(int $id): void
@@ -85,38 +157,85 @@ class Builder extends Component
         $section = $this->assetCategory->sections()->findOrFail($id);
 
         $this->editingSectionId = $section->id;
+        $this->sectionKind = $this->kindOf($section);
         $this->sectionName = $section->name;
         $this->sectionKey = $section->key;
+        $this->sectionParentId = $section->parent_id;
         $this->sectionOrder = $section->order;
+        $this->sectionMinEntries = $section->min_entries;
+        $this->sectionMaxEntries = $section->max_entries;
+        $this->sectionIsTicketLinkable = $section->is_ticket_linkable;
+        $this->sectionTicketLabel = $section->ticket_label;
+        $this->sectionDisplayFieldId = $section->display_field_id;
+        $this->sectionLinkParentOnSelect = $section->link_parent_on_select;
     }
 
     public function saveSection(): void
     {
         $this->authorize('manage-categories');
 
-        $data = $this->validate($this->sectionRules(), [], [
-            'sectionName' => 'nazwa sekcji',
-            'sectionKey' => 'klucz sekcji',
+        $data = $this->validate($this->sectionRules(), $this->sectionMessages(), [
+            'sectionKind' => 'rodzaj węzła',
+            'sectionName' => 'nazwa węzła',
+            'sectionKey' => 'klucz węzła',
+            'sectionParentId' => 'węzeł nadrzędny',
             'sectionOrder' => 'kolejność',
+            'sectionMinEntries' => 'minimalna liczba wpisów',
+            'sectionMaxEntries' => 'maksymalna liczba wpisów',
+            'sectionTicketLabel' => 'etykieta w zgłoszeniu',
+            'sectionDisplayFieldId' => 'pole etykietujące',
         ]);
+
+        $parentId = $this->sectionKind === self::KIND_SECTION ? null : $data['sectionParentId'];
+
+        // Strażnik cyklu: rodzic nie może być samym węzłem (ani jego potomkiem).
+        if ($parentId !== null && $this->editingSectionId !== null) {
+            if ($parentId === $this->editingSectionId || $this->isDescendant($parentId, $this->editingSectionId)) {
+                $this->addError('sectionParentId', 'Węzeł nie może być swoim własnym rodzicem ani potomkiem.');
+
+                return;
+            }
+        }
+
+        $isGroup = $this->sectionKind === self::KIND_GROUP;
+        $isRepeatable = $isGroup;
+
+        // Walidacja min ≤ max (tylko gdy oba podane i to grupa powtarzalna).
+        $min = $isGroup ? $this->sectionMinEntries : null;
+        $max = $isGroup ? $this->sectionMaxEntries : null;
+
+        if ($min !== null && $max !== null && $min > $max) {
+            $this->addError('sectionMaxEntries', 'Maksimum nie może być mniejsze niż minimum.');
+
+            return;
+        }
 
         AssetSection::updateOrCreate(
             ['id' => $this->editingSectionId],
             [
                 'asset_category_id' => $this->assetCategory->id,
+                'parent_id' => $parentId,
                 'name' => $data['sectionName'],
                 'key' => $data['sectionKey'],
+                'is_group' => $isGroup,
+                'is_repeatable' => $isRepeatable,
+                'min_entries' => $min,
+                'max_entries' => $max,
+                'is_ticket_linkable' => $isGroup ? $this->sectionIsTicketLinkable : false,
+                'ticket_label' => $isGroup ? ($this->sectionTicketLabel ?: null) : null,
+                'display_field_id' => $isGroup ? $this->sectionDisplayFieldId : null,
+                'link_parent_on_select' => $isGroup ? $this->sectionLinkParentOnSelect : false,
                 'order' => $data['sectionOrder'],
             ],
         );
 
         $this->resetSectionForm();
-        session()->flash('status', 'Zapisano sekcję.');
+        session()->flash('status', 'Zapisano węzeł struktury.');
     }
 
     /**
-     * Dezaktywacja sekcji (is_active=false). NIE kasujemy twardo — twarde
-     * usunięcie sekcji ustawiłoby asset_section_id pól na NULL (osierocenie).
+     * Dezaktywacja węzła (is_active=false). NIE kasujemy twardo — twarde
+     * usunięcie zerwałoby parent_id potomków (nullOnDelete) i osierociło pola.
      */
     public function deactivateSection(int $id): void
     {
@@ -128,13 +247,55 @@ class Builder extends Component
             $this->resetSectionForm();
         }
 
-        session()->flash('status', 'Sekcja została dezaktywowana.');
+        session()->flash('status', 'Węzeł został dezaktywowany.');
     }
 
     public function resetSectionForm(): void
     {
-        $this->reset(['editingSectionId', 'sectionName', 'sectionKey', 'sectionOrder']);
+        $this->reset([
+            'editingSectionId', 'sectionName', 'sectionKey', 'sectionParentId',
+            'sectionOrder', 'sectionMinEntries', 'sectionMaxEntries',
+            'sectionIsTicketLinkable', 'sectionTicketLabel', 'sectionDisplayFieldId',
+            'sectionLinkParentOnSelect',
+        ]);
+        $this->sectionKind = self::KIND_SECTION;
         $this->resetValidation();
+    }
+
+    /** Klasyfikacja zapisanego węzła do jednego z trzech rodzajów. */
+    protected function kindOf(AssetSection $section): string
+    {
+        if ($section->is_group || $section->is_repeatable) {
+            return self::KIND_GROUP;
+        }
+
+        return $section->parent_id ? self::KIND_SUBSECTION : self::KIND_SECTION;
+    }
+
+    /**
+     * Czy $candidateId jest potomkiem $nodeId w obrębie tej kategorii.
+     * Chroni przed utworzeniem cyklu przy zmianie rodzica.
+     */
+    protected function isDescendant(int $candidateId, int $nodeId): bool
+    {
+        $byParent = $this->assetCategory->sections()
+            ->get(['id', 'parent_id'])
+            ->groupBy('parent_id');
+
+        $stack = [$nodeId];
+
+        while ($stack !== []) {
+            $current = array_pop($stack);
+
+            foreach ($byParent->get($current, collect()) as $child) {
+                if ((int) $child->id === $candidateId) {
+                    return true;
+                }
+                $stack[] = (int) $child->id;
+            }
+        }
+
+        return false;
     }
 
     /* ============================= POLA ============================== */
@@ -150,7 +311,7 @@ class Builder extends Component
                     ->where('asset_category_id', $this->assetCategory->id)
                     ->ignore($this->editingFieldId),
             ],
-            // Tylko renderowalne typy; file/relation odrzucamy po stronie serwera.
+            // Tylko obsługiwane typy; file/relation odrzucamy po stronie serwera.
             'fieldType' => ['required', Rule::in($this->allowedFieldTypes())],
             // Opcje wymagane wyłącznie dla typu select.
             'fieldOptions' => [
@@ -163,9 +324,13 @@ class Builder extends Component
                 Rule::exists('asset_sections', 'id')->where('asset_category_id', $this->assetCategory->id),
             ],
             'fieldOrder' => ['integer', 'min:0'],
+            'fieldPlaceholder' => ['nullable', 'string', 'max:255'],
+            'fieldDefaultValue' => ['nullable', 'string'],
+            'fieldHelp' => ['nullable', 'string', 'max:255'],
         ];
     }
 
+    /** @return array<string,string> */
     protected function fieldMessages(): array
     {
         return [
@@ -179,8 +344,8 @@ class Builder extends Component
     }
 
     /**
-     * Parsuje opcje wpisane jako jedna na linię lub po przecinku → tablica unikatowych,
-     * niepustych wartości (gotowa do zapisu w kolumnie JSON `options`).
+     * Parsuje opcje wpisane jako jedna na linię lub po przecinku → tablica
+     * unikatowych, niepustych wartości (gotowa do zapisu w kolumnie JSON).
      *
      * @return array<int,string>
      */
@@ -208,6 +373,9 @@ class Builder extends Component
         $this->fieldIsRequired = $field->is_required;
         $this->fieldSectionId = $field->asset_section_id;
         $this->fieldOrder = $field->order;
+        $this->fieldPlaceholder = $field->placeholder;
+        $this->fieldDefaultValue = $field->default_value;
+        $this->fieldHelp = $field->help;
     }
 
     public function saveField(): void
@@ -220,12 +388,15 @@ class Builder extends Component
             'fieldType' => 'typ pola',
             'fieldOptions' => 'opcje',
             'fieldOrder' => 'kolejność',
+            'fieldPlaceholder' => 'podpowiedź',
+            'fieldDefaultValue' => 'wartość domyślna',
+            'fieldHelp' => 'tekst pomocy',
         ]);
 
         $isSelect = $data['fieldType'] === AssetFieldType::Select->value;
         $options = $isSelect ? $this->parseOptions($data['fieldOptions']) : null;
 
-        // Dla typu select wymagamy realnie sparsowanych opcji (np. same przecinki → puste).
+        // Dla typu select wymagamy realnie sparsowanych opcji (same przecinki → puste).
         if ($isSelect && $options === []) {
             $this->addError('fieldOptions', 'Dla typu „lista wyboru” podaj co najmniej jedną opcję.');
 
@@ -241,6 +412,9 @@ class Builder extends Component
                 'key' => $data['fieldKey'],
                 'type' => $data['fieldType'],
                 'options' => $options,
+                'placeholder' => $data['fieldPlaceholder'] ?: null,
+                'default_value' => $data['fieldDefaultValue'] ?: null,
+                'help' => $data['fieldHelp'] ?: null,
                 'is_required' => $data['fieldIsRequired'],
                 'order' => $data['fieldOrder'],
             ],
@@ -254,7 +428,6 @@ class Builder extends Component
      * Dezaktywacja pola (is_active=false). KRYTYCZNE: NIE kasujemy twardo —
      * asset_field_values.asset_field_id ma cascadeOnDelete, więc twarde usunięcie
      * skasowałoby wartości tego pola we wszystkich zasobach (utrata danych).
-     * Dezaktywowane pole zachowuje swoje istniejące wartości.
      */
     public function deactivateField(int $id): void
     {
@@ -274,29 +447,76 @@ class Builder extends Component
         $this->reset([
             'editingFieldId', 'fieldName', 'fieldKey', 'fieldType',
             'fieldOptions', 'fieldIsRequired', 'fieldSectionId', 'fieldOrder',
+            'fieldPlaceholder', 'fieldDefaultValue', 'fieldHelp',
         ]);
         $this->fieldType = AssetFieldType::Text->value;
         $this->resetValidation();
     }
 
-    /** Aktywne sekcje kategorii — do selecta przy przypisywaniu pola. */
+    /** Aktywne węzły kategorii — do selecta rodzica i przypisania pola. */
     protected function sectionsForSelect(): Collection
     {
         return $this->assetCategory->sections()->where('is_active', true)->get();
     }
 
+    /**
+     * Aktywne pola wskazanego węzła — kandydaci na display_field_id grupy.
+     * Pusta kolekcja, gdy edytujemy nowy węzeł (pól jeszcze nie ma).
+     */
+    protected function displayFieldOptions(): Collection
+    {
+        if ($this->editingSectionId === null) {
+            return collect();
+        }
+
+        return $this->assetCategory->fields()
+            ->where('asset_section_id', $this->editingSectionId)
+            ->where('is_active', true)
+            ->get();
+    }
+
+    /**
+     * Drzewo węzłów: top-level posortowane wg order, każdy z potomkami.
+     *
+     * @return Collection<int,AssetSection>
+     */
+    protected function sectionTree(Collection $all): Collection
+    {
+        $byParent = $all->groupBy('parent_id');
+
+        $attach = function (AssetSection $node) use (&$attach, $byParent) {
+            $node->setRelation(
+                'childNodes',
+                $byParent->get($node->id, collect())->map(fn ($c) => $attach($c))->values()
+            );
+
+            return $node;
+        };
+
+        return $byParent->get(null, collect())
+            ->map(fn ($n) => $attach($n))
+            ->values();
+    }
+
     public function render()
     {
+        $allSections = $this->assetCategory->sections()->with('displayField')->get();
+
         return view('livewire.asset-categories.builder', [
             'category' => $this->assetCategory,
-            'sections' => $this->assetCategory->sections()->get(),
+            'sectionTree' => $this->sectionTree($allSections),
             'fields' => $this->assetCategory->fields()->with('section')->get(),
+            'parentOptions' => $this->sectionsForSelect(),
             'sectionOptions' => $this->sectionsForSelect(),
+            'displayFieldOptions' => $this->displayFieldOptions(),
             'fieldTypes' => collect(AssetFieldType::cases())
                 ->filter(fn (AssetFieldType $t) => in_array($t->value, $this->allowedFieldTypes(), true))
                 ->mapWithKeys(fn (AssetFieldType $t) => [$t->value => $t->label()])
                 ->all(),
             'selectTypeValue' => AssetFieldType::Select->value,
+            'kindSection' => self::KIND_SECTION,
+            'kindSubsection' => self::KIND_SUBSECTION,
+            'kindGroup' => self::KIND_GROUP,
         ]);
     }
 }

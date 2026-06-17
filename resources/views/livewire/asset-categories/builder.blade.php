@@ -2,31 +2,64 @@
     <div class="page-head">
         <div>
             <h1>{{ $category->name }}</h1>
-            <p>Pola i sekcje kategorii zasobu <span class="muted">({{ $category->key }})</span>.</p>
+            <p>Struktura, sekcje i pola kategorii zasobu <span class="muted">({{ $category->key }})</span>.</p>
         </div>
         <a href="{{ route('dictionaries.asset-categories') }}" wire:navigate class="btn btn--ghost btn--sm">
             ← Wróć do kategorii
         </a>
     </div>
 
-    {{-- ============================== SEKCJE ============================== --}}
+    @if (session('status'))
+        <div class="alert alert--success" style="margin-bottom:18px">{{ session('status') }}</div>
+    @endif
+
+    {{-- ============================ STRUKTURA ============================ --}}
     <div class="card" style="margin-bottom:18px">
         <div class="card__body">
-            <h2 style="margin-top:0">Sekcje</h2>
-            <p class="muted">Grupy pól w obrębie kategorii (np. „Sprzęt”, „Sieć”).</p>
+            <h2 style="margin-top:0">Struktura</h2>
+            <p class="muted">
+                Drzewo węzłów: <strong>Sekcje</strong> → (<strong>Podsekcje</strong> | <strong>Grupy powtarzalne</strong>) → pola.
+            </p>
 
             <form wire:submit="saveSection">
                 <div class="form-grid">
+                    <div class="field">
+                        <label for="sectionKind">Rodzaj węzła *</label>
+                        <select id="sectionKind" class="select" wire:model.live="sectionKind">
+                            <option value="{{ $kindSection }}">Sekcja (najwyższy poziom)</option>
+                            <option value="{{ $kindSubsection }}">Podsekcja (zagnieżdżona)</option>
+                            <option value="{{ $kindGroup }}">Grupa powtarzalna</option>
+                        </select>
+                        @error('sectionKind') <span class="error">{{ $message }}</span> @enderror
+                    </div>
+
                     <div class="field">
                         <label for="sectionName">Nazwa *</label>
                         <input id="sectionName" class="input" wire:model="sectionName">
                         @error('sectionName') <span class="error">{{ $message }}</span> @enderror
                     </div>
+
                     <div class="field">
                         <label for="sectionKey">Klucz *</label>
                         <input id="sectionKey" class="input" wire:model="sectionKey">
                         @error('sectionKey') <span class="error">{{ $message }}</span> @enderror
                     </div>
+
+                    @if ($sectionKind !== $kindSection)
+                        <div class="field">
+                            <label for="sectionParentId">Węzeł nadrzędny *</label>
+                            <select id="sectionParentId" class="select" wire:model="sectionParentId">
+                                <option value="">— wybierz —</option>
+                                @foreach ($parentOptions as $node)
+                                    @if (! $editingSectionId || $node->id !== $editingSectionId)
+                                        <option value="{{ $node->id }}">{{ $node->name }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            @error('sectionParentId') <span class="error">{{ $message }}</span> @enderror
+                        </div>
+                    @endif
+
                     <div class="field">
                         <label for="sectionOrder">Kolejność</label>
                         <input id="sectionOrder" type="number" min="0" class="input" wire:model="sectionOrder">
@@ -34,9 +67,66 @@
                     </div>
                 </div>
 
+                {{-- Konfiguracja grupy powtarzalnej / pod-zasobu --}}
+                @if ($sectionKind === $kindGroup)
+                    <div class="card" style="margin-top:14px;background:var(--surface-2, #f7f7f9)">
+                        <div class="card__body">
+                            <h3 style="margin-top:0">Konfiguracja grupy powtarzalnej</h3>
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="sectionMinEntries">Min. wpisów</label>
+                                    <input id="sectionMinEntries" type="number" min="0" class="input" wire:model="sectionMinEntries">
+                                    @error('sectionMinEntries') <span class="error">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="field">
+                                    <label for="sectionMaxEntries">Maks. wpisów</label>
+                                    <input id="sectionMaxEntries" type="number" min="1" class="input" wire:model="sectionMaxEntries">
+                                    @error('sectionMaxEntries') <span class="error">{{ $message }}</span> @enderror
+                                </div>
+
+                                <div class="field field--full">
+                                    <label class="checkbox">
+                                        <input type="checkbox" wire:model.live="sectionIsTicketLinkable">
+                                        <span>Pod-zasób można linkować w zgłoszeniach</span>
+                                    </label>
+                                </div>
+
+                                @if ($sectionIsTicketLinkable)
+                                    <div class="field">
+                                        <label for="sectionTicketLabel">Etykieta w zgłoszeniu</label>
+                                        <input id="sectionTicketLabel" class="input" wire:model="sectionTicketLabel">
+                                        @error('sectionTicketLabel') <span class="error">{{ $message }}</span> @enderror
+                                    </div>
+
+                                    <div class="field">
+                                        <label for="sectionDisplayFieldId">Pole etykietujące wpis</label>
+                                        <select id="sectionDisplayFieldId" class="select" wire:model="sectionDisplayFieldId">
+                                            <option value="">— wpis #id —</option>
+                                            @foreach ($displayFieldOptions as $df)
+                                                <option value="{{ $df->id }}">{{ $df->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('sectionDisplayFieldId') <span class="error">{{ $message }}</span> @enderror
+                                        @if (! $editingSectionId)
+                                            <span class="hint">Najpierw zapisz grupę i dodaj jej pola, aby wybrać pole etykietujące.</span>
+                                        @endif
+                                    </div>
+
+                                    <div class="field field--full">
+                                        <label class="checkbox">
+                                            <input type="checkbox" wire:model="sectionLinkParentOnSelect">
+                                            <span>Przy wyborze pod-zasobu linkuj też zasób-rodzica</span>
+                                        </label>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <div style="margin-top:14px;display:flex;gap:10px">
                     <button type="submit" class="btn btn--primary" wire:loading.attr="disabled">
-                        {{ $editingSectionId ? 'Zapisz sekcję' : 'Dodaj sekcję' }}
+                        {{ $editingSectionId ? 'Zapisz węzeł' : 'Dodaj węzeł' }}
                     </button>
                     @if ($editingSectionId)
                         <button type="button" class="btn btn--ghost" wire:click="resetSectionForm">Anuluj</button>
@@ -44,45 +134,13 @@
                 </div>
             </form>
 
-            <table class="table" style="margin-top:18px">
-                <thead>
-                    <tr>
-                        <th>Kolejność</th>
-                        <th>Nazwa</th>
-                        <th>Klucz</th>
-                        <th>Status</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                @forelse ($sections as $section)
-                    <tr>
-                        <td class="muted">{{ $section->order }}</td>
-                        <td><strong>{{ $section->name }}</strong></td>
-                        <td class="muted">{{ $section->key }}</td>
-                        <td>
-                            @if ($section->is_active)
-                                <span class="badge badge--green">Aktywna</span>
-                            @else
-                                <span class="badge badge--gray">Nieaktywna</span>
-                            @endif
-                        </td>
-                        <td style="text-align:right">
-                            <button type="button" class="btn btn--ghost btn--sm" wire:click="editSection({{ $section->id }})">Edytuj</button>
-                            @if ($section->is_active)
-                                <button type="button" class="btn btn--ghost btn--sm"
-                                        wire:click="deactivateSection({{ $section->id }})"
-                                        wire:confirm="Dezaktywować tę sekcję?">
-                                    Dezaktywuj
-                                </button>
-                            @endif
-                        </td>
-                    </tr>
+            <div style="margin-top:18px">
+                @forelse ($sectionTree as $node)
+                    @include('livewire.asset-categories._node', ['node' => $node, 'depth' => 0])
                 @empty
-                    <tr><td colspan="5" class="table__empty">Brak sekcji.</td></tr>
+                    <p class="muted">Brak węzłów. Dodaj pierwszą sekcję powyżej.</p>
                 @endforelse
-                </tbody>
-            </table>
+            </div>
         </div>
     </div>
 
@@ -90,7 +148,7 @@
     <div class="card">
         <div class="card__body">
             <h2 style="margin-top:0">Pola</h2>
-            <p class="muted">Dynamiczne pola definiujące dane zasobu w tej kategorii.</p>
+            <p class="muted">Dynamiczne pola przypisane do węzła struktury (sekcji, podsekcji lub grupy).</p>
 
             <form wire:submit="saveField">
                 <div class="form-grid">
@@ -124,7 +182,7 @@
                     @endif
 
                     <div class="field">
-                        <label for="fieldSectionId">Sekcja <span class="hint">— opcjonalna</span></label>
+                        <label for="fieldSectionId">Węzeł <span class="hint">— opcjonalny</span></label>
                         <select id="fieldSectionId" class="select" wire:model="fieldSectionId">
                             <option value="">— brak —</option>
                             @foreach ($sectionOptions as $section)
@@ -138,6 +196,24 @@
                         <label for="fieldOrder">Kolejność</label>
                         <input id="fieldOrder" type="number" min="0" class="input" wire:model="fieldOrder">
                         @error('fieldOrder') <span class="error">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="field">
+                        <label for="fieldPlaceholder">Podpowiedź (placeholder)</label>
+                        <input id="fieldPlaceholder" class="input" wire:model="fieldPlaceholder">
+                        @error('fieldPlaceholder') <span class="error">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="field">
+                        <label for="fieldDefaultValue">Wartość domyślna</label>
+                        <input id="fieldDefaultValue" class="input" wire:model="fieldDefaultValue">
+                        @error('fieldDefaultValue') <span class="error">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="field field--full">
+                        <label for="fieldHelp">Tekst pomocy</label>
+                        <input id="fieldHelp" class="input" wire:model="fieldHelp">
+                        @error('fieldHelp') <span class="error">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="field field--full">
@@ -166,7 +242,7 @@
                         <th>Nazwa</th>
                         <th>Klucz</th>
                         <th>Typ</th>
-                        <th>Sekcja</th>
+                        <th>Węzeł</th>
                         <th>Wymagane</th>
                         <th>Status</th>
                         <th></th>
