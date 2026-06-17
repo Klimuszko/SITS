@@ -116,6 +116,8 @@ return [
         'location.created' => 'Location created',
         'location.updated' => 'Location updated',
         'attachment.added' => 'Attachment added',
+        'article.created' => 'Article created',
+        'article.updated' => 'Article updated',
         'article.visibility_changed' => 'Article visibility changed',
         'work_log.created' => 'Administrative work log created',
         'work_log.updated' => 'Administrative work log updated',

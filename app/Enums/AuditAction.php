@@ -34,6 +34,8 @@ enum AuditAction: string
     case LocationUpdated = 'location.updated';
 
     case AttachmentAdded = 'attachment.added';
+    case ArticleCreated = 'article.created';
+    case ArticleUpdated = 'article.updated';
     case ArticleVisibilityChanged = 'article.visibility_changed';
     case WorkLogCreated = 'work_log.created';
     case WorkLogUpdated = 'work_log.updated';

@@ -115,6 +115,8 @@ return [
         'location.created' => 'Utworzono lokalizację',
         'location.updated' => 'Zmieniono lokalizację',
         'attachment.added' => 'Dodano załącznik',
+        'article.created' => 'Utworzono artykuł',
+        'article.updated' => 'Zmieniono artykuł',
         'article.visibility_changed' => 'Zmieniono widoczność artykułu',
         'work_log.created' => 'Utworzono pracę administracyjną',
         'work_log.updated' => 'Zmieniono pracę administracyjną',

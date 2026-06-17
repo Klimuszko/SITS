@@ -25,9 +25,7 @@
                 <a href="{{ route('assets.index') }}" wire:navigate class="{{ request()->routeIs('assets.*') ? 'active' : '' }}">Zasoby</a>
                 <a href="{{ route('locations.index') }}" wire:navigate class="{{ request()->routeIs('locations.*') ? 'active' : '' }}">Lokalizacje</a>
                 <a href="{{ route('work-logs.index') }}" wire:navigate class="{{ request()->routeIs('work-logs.*') ? 'active' : '' }}">Prace adm.</a>
-
-                {{-- Moduły w przygotowaniu (schemat i policies gotowe) --}}
-                <span class="nav__disabled">Baza wiedzy <small>· wkrótce</small></span>
+                <a href="{{ route('knowledge.index') }}" wire:navigate class="{{ request()->routeIs('knowledge.*') ? 'active' : '' }}">Baza wiedzy</a>
             </nav>
 
             <div class="usermenu">

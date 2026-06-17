@@ -8,6 +8,9 @@ use App\Livewire\Assets\ManageForm as AssetForm;
 use App\Livewire\Assets\Show as AssetShow;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard;
+use App\Livewire\Knowledge\Index as KnowledgeIndex;
+use App\Livewire\Knowledge\ManageForm as KnowledgeForm;
+use App\Livewire\Knowledge\Show as KnowledgeShow;
 use App\Livewire\Locations\Index as LocationIndex;
 use App\Livewire\Locations\ManageForm as LocationForm;
 use App\Livewire\Organizations\Index as OrganizationIndex;
@@ -81,4 +84,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/uzytkownicy', UserIndex::class)->name('users.index');
     Route::get('/uzytkownicy/nowy', UserForm::class)->name('users.create');
     Route::get('/uzytkownicy/{user}/edycja', UserForm::class)->name('users.edit');
+
+    // Baza wiedzy. Autoryzacja w mount() komponentów (KnowledgeArticlePolicy);
+    // celowo BEZ middleware role: — widoczność zależy od reguł, nie od samej roli globalnej.
+    // Trasa statyczna (/nowy) PRZED /{article}, żeby nie została przechwycona jako parametr.
+    Route::get('/baza-wiedzy', KnowledgeIndex::class)->name('knowledge.index');
+    Route::get('/baza-wiedzy/nowy', KnowledgeForm::class)->name('knowledge.create');
+    Route::get('/baza-wiedzy/{article}', KnowledgeShow::class)->name('knowledge.show');
+    Route::get('/baza-wiedzy/{article}/edycja', KnowledgeForm::class)->name('knowledge.edit');
 });
