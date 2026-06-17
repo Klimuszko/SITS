@@ -3,6 +3,8 @@
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\HomeController;
+use App\Livewire\AssetCategories\Builder as AssetCategoryBuilder;
+use App\Livewire\AssetCategories\Index as AssetCategoryIndex;
 use App\Livewire\Assets\Index as AssetIndex;
 use App\Livewire\Assets\ManageForm as AssetForm;
 use App\Livewire\Assets\Show as AssetShow;
@@ -95,6 +97,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/slowniki/kategorie-zgloszen', DictionaryTicketCategories::class)->name('dictionaries.ticket-categories');
     Route::get('/slowniki/priorytety', DictionaryTicketPriorities::class)->name('dictionaries.ticket-priorities');
     Route::get('/slowniki/kategorie-wiedzy', DictionaryKnowledgeCategories::class)->name('dictionaries.knowledge-categories');
+
+    // Kategorie zasobów (builder typów zasobów + dynamiczne pola/sekcje). Autoryzacja
+    // w mount() przez bramkę manage-categories. Segment statyczny PRZED parametrem
+    // {assetCategory}, żeby nie został przechwycony. Powiązanie modelu po konwencji nazwy.
+    Route::get('/slowniki/kategorie-zasobow', AssetCategoryIndex::class)->name('dictionaries.asset-categories');
+    Route::get('/slowniki/kategorie-zasobow/{assetCategory}/pola', AssetCategoryBuilder::class)
+        ->name('dictionaries.asset-category-fields');
 
     // Baza wiedzy. Autoryzacja w mount() komponentów (KnowledgeArticlePolicy);
     // celowo BEZ middleware role: — widoczność zależy od reguł, nie od samej roli globalnej.
