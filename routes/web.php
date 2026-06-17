@@ -8,6 +8,7 @@ use App\Livewire\AssetCategories\Index as AssetCategoryIndex;
 use App\Livewire\Assets\Index as AssetIndex;
 use App\Livewire\Assets\ManageForm as AssetForm;
 use App\Livewire\Assets\Show as AssetShow;
+use App\Livewire\Audit\Index as AuditIndex;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard;
 use App\Livewire\Dictionaries\KnowledgeCategories as DictionaryKnowledgeCategories;
@@ -112,4 +113,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/baza-wiedzy/nowy', KnowledgeForm::class)->name('knowledge.create');
     Route::get('/baza-wiedzy/{article}', KnowledgeShow::class)->name('knowledge.show');
     Route::get('/baza-wiedzy/{article}/edycja', KnowledgeForm::class)->name('knowledge.edit');
+
+    // Audyt (tylko do odczytu, admin). Autoryzacja w mount() przez bramkę view-audit.
+    Route::get('/audyt', AuditIndex::class)->name('audit.index');
 });

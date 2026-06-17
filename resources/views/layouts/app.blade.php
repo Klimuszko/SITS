@@ -25,6 +25,9 @@
                 @can('manage-categories')
                     <a href="{{ route('dictionaries.ticket-categories') }}" wire:navigate class="{{ request()->routeIs('dictionaries.*') ? 'active' : '' }}">Słowniki</a>
                 @endcan
+                @can('view-audit')
+                    <a href="{{ route('audit.index') }}" wire:navigate class="{{ request()->routeIs('audit.*') ? 'active' : '' }}">Audyt</a>
+                @endcan
                 <a href="{{ route('assets.index') }}" wire:navigate class="{{ request()->routeIs('assets.*') ? 'active' : '' }}">Zasoby</a>
                 <a href="{{ route('locations.index') }}" wire:navigate class="{{ request()->routeIs('locations.*') ? 'active' : '' }}">Lokalizacje</a>
                 <a href="{{ route('work-logs.index') }}" wire:navigate class="{{ request()->routeIs('work-logs.*') ? 'active' : '' }}">Prace adm.</a>
