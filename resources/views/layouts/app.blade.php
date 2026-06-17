@@ -18,7 +18,9 @@
             <nav class="nav">
                 <a href="{{ route('dashboard') }}" wire:navigate class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">Pulpit</a>
                 <a href="{{ route('tickets.index') }}" wire:navigate class="{{ request()->routeIs('tickets.*') ? 'active' : '' }}">Zgłoszenia</a>
-                <a href="{{ route('organizations.index') }}" wire:navigate class="{{ request()->routeIs('organizations.*') ? 'active' : '' }}">Organizacje</a>
+                @if ($user->isStaff())
+                    <a href="{{ route('organizations.index') }}" wire:navigate class="{{ request()->routeIs('organizations.*') ? 'active' : '' }}">Organizacje</a>
+                @endif
                 @can('manage-users')
                     <a href="{{ route('users.index') }}" wire:navigate class="{{ request()->routeIs('users.*') ? 'active' : '' }}">Użytkownicy</a>
                 @endcan
@@ -29,14 +31,18 @@
                     <a href="{{ route('audit.index') }}" wire:navigate class="{{ request()->routeIs('audit.*') ? 'active' : '' }}">Audyt</a>
                 @endcan
                 <a href="{{ route('assets.index') }}" wire:navigate class="{{ request()->routeIs('assets.*') ? 'active' : '' }}">Zasoby</a>
-                <a href="{{ route('locations.index') }}" wire:navigate class="{{ request()->routeIs('locations.*') ? 'active' : '' }}">Lokalizacje</a>
-                <a href="{{ route('work-logs.index') }}" wire:navigate class="{{ request()->routeIs('work-logs.*') ? 'active' : '' }}">Prace adm.</a>
+                @if ($user->isStaff())
+                    <a href="{{ route('locations.index') }}" wire:navigate class="{{ request()->routeIs('locations.*') ? 'active' : '' }}">Lokalizacje</a>
+                @endif
+                @if ($user->isStaff() || $user->managesAnyOrganization())
+                    <a href="{{ route('work-logs.index') }}" wire:navigate class="{{ request()->routeIs('work-logs.*') ? 'active' : '' }}">Prace adm.</a>
+                @endif
                 <a href="{{ route('knowledge.index') }}" wire:navigate class="{{ request()->routeIs('knowledge.*') ? 'active' : '' }}">Baza wiedzy</a>
             </nav>
 
             <div class="usermenu">
                 <div style="text-align:right">
-                    <div class="usermenu__name">{{ $user->name }}</div>
+                    <a href="{{ route('profile.edit') }}" wire:navigate class="usermenu__name">{{ $user->name }}</a>
                     <div class="usermenu__role">{{ $user->role->label() }}</div>
                 </div>
                 <form method="POST" action="{{ route('logout') }}">

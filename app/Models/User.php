@@ -158,6 +158,15 @@ class User extends Authenticatable
         return $this->membershipFor($organizationId)?->role === OrgRole::Manager;
     }
 
+    /** Czy użytkownik jest aktywnym managerem w jakiejkolwiek organizacji. */
+    public function managesAnyOrganization(): bool
+    {
+        return $this->memberships
+            ->where('is_active', true)
+            ->where('role', OrgRole::Manager)
+            ->isNotEmpty();
+    }
+
     /** Czy support jest przypisany (aktywnie) do organizacji. */
     public function supportsOrganization(int $organizationId): bool
     {

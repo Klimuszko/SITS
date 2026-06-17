@@ -21,6 +21,7 @@ use App\Livewire\Locations\Index as LocationIndex;
 use App\Livewire\Locations\ManageForm as LocationForm;
 use App\Livewire\Organizations\Index as OrganizationIndex;
 use App\Livewire\Organizations\ManageForm as OrganizationForm;
+use App\Livewire\Profile\Edit as ProfileEdit;
 use App\Livewire\Tickets\Create as TicketCreate;
 use App\Livewire\Tickets\Index as TicketIndex;
 use App\Livewire\Tickets\Show as TicketShow;
@@ -45,6 +46,10 @@ Route::post('/logout', LogoutController::class)->name('logout')->middleware('aut
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
+
+    // Profil użytkownika (samoobsługa). Edytuje wyłącznie auth()->user() — komponent
+    // nie przyjmuje użytkownika z trasy, więc nie da się edytować cudzego konta.
+    Route::get('/profil', ProfileEdit::class)->name('profile.edit');
 
     // Bezpieczne pobieranie załączników (zawsze przez kontroler z autoryzacją).
     Route::get('/zalaczniki/{attachment}/pobierz', [AttachmentController::class, 'download'])
