@@ -60,7 +60,6 @@ return [
 
     'ticket_status' => [
         'new' => 'Nowy',
-        'assigned' => 'Przypisany',
         'in_progress' => 'W trakcie',
         'waiting_user' => 'Oczekuje na użytkownika',
         'resolved' => 'Rozwiązany',
@@ -72,6 +71,7 @@ return [
         'public' => 'Publiczny',
         'internal' => 'Notatka wewnętrzna',
         'close_request' => 'Prośba o zamknięcie',
+        'system' => 'Systemowy',
     ],
 
     'publication_status' => [

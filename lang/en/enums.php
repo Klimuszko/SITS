@@ -61,7 +61,6 @@ return [
 
     'ticket_status' => [
         'new' => 'New',
-        'assigned' => 'Assigned',
         'in_progress' => 'In progress',
         'waiting_user' => 'Waiting for user',
         'resolved' => 'Resolved',
@@ -73,6 +72,7 @@ return [
         'public' => 'Public',
         'internal' => 'Internal note',
         'close_request' => 'Close request',
+        'system' => 'System',
     ],
 
     'publication_status' => [

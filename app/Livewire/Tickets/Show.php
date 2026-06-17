@@ -66,7 +66,7 @@ class Show extends Component
 
         // Odpowiedź klienta zdejmuje status "Oczekuje na użytkownika".
         if (! $this->isStaff() && $this->ticket->status === TicketStatus::WaitingUser) {
-            $tickets->changeStatus($this->ticket, TicketStatus::InProgress);
+            $tickets->changeStatus($this->ticket, TicketStatus::InProgress, auth()->user());
         }
 
         AuditLogger::log(AuditAction::TicketCommented, $this->ticket);
@@ -114,31 +114,43 @@ class Show extends Component
         $this->authorize('manage', $this->ticket);
         $this->validate(['selectedStatus' => ['required', Rule::enum(TicketStatus::class)]]);
 
-        $tickets->changeStatus($this->ticket, TicketStatus::from($this->selectedStatus));
+        $tickets->changeStatus($this->ticket, TicketStatus::from($this->selectedStatus), auth()->user());
         $this->ticket->refresh();
         session()->flash('status', 'Zmieniono status zgłoszenia.');
     }
 
-    public function assignSupport(): void
+    public function assignSupport(TicketService $tickets): void
     {
         $this->authorize('manage', $this->ticket);
 
-        $supporterIds = $this->ticket->organization->supporters()->pluck('users.id')->all();
+        $supporters = $this->ticket->organization->supporters()->get();
         $this->validate([
-            'selectedSupport' => ['nullable', 'integer', Rule::in($supporterIds)],
+            'selectedSupport' => ['nullable', 'integer', Rule::in($supporters->pluck('id')->all())],
         ]);
 
         $old = $this->ticket->assigned_support_id;
-        $this->ticket->assigned_support_id = $this->selectedSupport;
+        $new = $this->selectedSupport;
 
-        if ($this->selectedSupport && $this->ticket->status === TicketStatus::New) {
-            $this->ticket->status = TicketStatus::Assigned;
+        // Brak realnej zmiany przypisania – nic nie zapisujemy (bez pustego wpisu systemowego).
+        if ($old === $new) {
+            session()->flash('status', 'Zaktualizowano przypisanie zgłoszenia.');
+
+            return;
         }
+
+        $this->ticket->assigned_support_id = $new;
         $this->ticket->save();
 
         AuditLogger::log(AuditAction::TicketAssigned, $this->ticket,
             ['assigned_support_id' => $old],
-            ['assigned_support_id' => $this->selectedSupport]);
+            ['assigned_support_id' => $new]);
+
+        if ($new) {
+            $name = $supporters->firstWhere('id', $new)?->name;
+            $tickets->systemComment($this->ticket, 'Przypisano do '.$name, auth()->id());
+        } else {
+            $tickets->systemComment($this->ticket, 'Zdjęto przypisanie', auth()->id());
+        }
 
         $this->ticket->refresh();
         session()->flash('status', 'Zaktualizowano przypisanie zgłoszenia.');

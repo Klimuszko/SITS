@@ -9,7 +9,6 @@ namespace App\Enums;
 enum TicketStatus: string
 {
     case New = 'new';
-    case Assigned = 'assigned';
     case InProgress = 'in_progress';
     case WaitingUser = 'waiting_user';
     case Resolved = 'resolved';
@@ -25,7 +24,6 @@ enum TicketStatus: string
     {
         return match ($this) {
             self::New => 'blue',
-            self::Assigned => 'indigo',
             self::InProgress => 'amber',
             self::WaitingUser => 'orange',
             self::Resolved => 'teal',

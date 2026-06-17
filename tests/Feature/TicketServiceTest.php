@@ -32,7 +32,7 @@ class TicketServiceTest extends TestCase
         return [$requester, $organization];
     }
 
-    public function test_create_assigns_primary_support_and_sets_status_assigned(): void
+    public function test_create_assigns_primary_support_and_keeps_status_new(): void
     {
         [$requester, $organization] = $this->requesterAndOrg();
         $support = User::factory()->support()->create();
@@ -51,7 +51,7 @@ class TicketServiceTest extends TestCase
         ]);
 
         $this->assertSame($support->id, $ticket->assigned_support_id);
-        $this->assertSame(TicketStatus::Assigned, $ticket->status);
+        $this->assertSame(TicketStatus::New, $ticket->status);
     }
 
     public function test_create_uses_default_support_user_when_set(): void
@@ -66,7 +66,7 @@ class TicketServiceTest extends TestCase
         ]);
 
         $this->assertSame($support->id, $ticket->assigned_support_id);
-        $this->assertSame(TicketStatus::Assigned, $ticket->status);
+        $this->assertSame(TicketStatus::New, $ticket->status);
     }
 
     public function test_create_auto_assigns_to_super_admin_default_support(): void
@@ -81,7 +81,7 @@ class TicketServiceTest extends TestCase
         ]);
 
         $this->assertSame($superAdmin->id, $ticket->assigned_support_id);
-        $this->assertSame(TicketStatus::Assigned, $ticket->status);
+        $this->assertSame(TicketStatus::New, $ticket->status);
     }
 
     public function test_create_without_support_sets_status_new(): void
@@ -199,7 +199,7 @@ class TicketServiceTest extends TestCase
 
         $this->assertNull($ticket->resolved_at);
 
-        $this->service()->changeStatus($ticket, TicketStatus::Resolved);
+        $this->service()->changeStatus($ticket, TicketStatus::Resolved, $requester);
 
         $this->assertSame(TicketStatus::Resolved, $ticket->fresh()->status);
         $this->assertNotNull($ticket->fresh()->resolved_at);
@@ -214,9 +214,70 @@ class TicketServiceTest extends TestCase
 
         $this->assertNull($ticket->closed_at);
 
-        $this->service()->changeStatus($ticket, TicketStatus::Closed);
+        $this->service()->changeStatus($ticket, TicketStatus::Closed, $requester);
 
         $this->assertSame(TicketStatus::Closed, $ticket->fresh()->status);
         $this->assertNotNull($ticket->fresh()->closed_at);
+    }
+
+    public function test_change_status_writes_system_timeline_comment_with_old_and_new_labels(): void
+    {
+        [$requester, $organization] = $this->requesterAndOrg();
+        $ticket = Ticket::factory()->forOrganization($organization)->create([
+            'requester_id' => $requester->id,
+            'status' => TicketStatus::New,
+        ]);
+        $actor = User::factory()->support()->create();
+
+        $this->service()->changeStatus($ticket, TicketStatus::InProgress, $actor);
+
+        $comment = $ticket->comments()
+            ->where('type', CommentType::System->value)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($comment);
+        $this->assertSame($actor->id, $comment->user_id);
+        $this->assertSame(
+            'Status: '.TicketStatus::New->label().' → '.TicketStatus::InProgress->label(),
+            $comment->body,
+        );
+    }
+
+    public function test_create_writes_system_comment_with_created_and_assigned_text(): void
+    {
+        $support = User::factory()->support()->create();
+        $organization = Organization::factory()->create(['default_support_user_id' => $support->id]);
+        $requester = User::factory()->create();
+
+        $ticket = $this->service()->create($requester, $organization, [
+            'title' => 'Awaria',
+            'description' => 'Opis awarii.',
+        ]);
+
+        $comment = $ticket->comments()
+            ->where('type', CommentType::System->value)
+            ->first();
+
+        $this->assertNotNull($comment);
+        $this->assertSame('Utworzono zgłoszenie · przypisano do '.$support->name, $comment->body);
+        $this->assertSame($requester->id, $comment->user_id);
+    }
+
+    public function test_create_without_support_writes_plain_created_system_comment(): void
+    {
+        [$requester, $organization] = $this->requesterAndOrg();
+
+        $ticket = $this->service()->create($requester, $organization, [
+            'title' => 'Brak supportu',
+            'description' => 'Bez przypisania.',
+        ]);
+
+        $comment = $ticket->comments()
+            ->where('type', CommentType::System->value)
+            ->first();
+
+        $this->assertNotNull($comment);
+        $this->assertSame('Utworzono zgłoszenie', $comment->body);
     }
 }

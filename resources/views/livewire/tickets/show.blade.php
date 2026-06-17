@@ -30,20 +30,27 @@
                 <div class="card__body stack" style="gap:14px">
                     @forelse ($comments as $comment)
                         @php($t = $comment->type)
-                        <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;
-                            @if($t === \App\Enums\CommentType::Internal) background:var(--c-amber-bg);border-color:#fcd97e;
-                            @elseif($t === \App\Enums\CommentType::CloseRequest) background:var(--c-orange-bg);border-color:#fdba74; @endif">
-                            <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px">
-                                <strong>{{ $comment->author?->name }}</strong>
-                                <span class="muted" style="font-size:12px">{{ $comment->created_at->format('Y-m-d H:i') }}</span>
+                        @if ($t === \App\Enums\CommentType::System)
+                            {{-- Wpis systemowy: zdarzenie osi czasu (zmiana statusu, utworzenie, przypisanie). --}}
+                            <div class="muted" style="text-align:center;font-size:12px;line-height:1.5">
+                                {{ $comment->body }} · {{ $comment->created_at->format('Y-m-d H:i') }}
                             </div>
-                            @if ($t === \App\Enums\CommentType::Internal)
-                                <span class="badge badge--amber" style="margin-bottom:6px;display:inline-block">Notatka wewnętrzna</span>
-                            @elseif ($t === \App\Enums\CommentType::CloseRequest)
-                                <span class="badge badge--orange" style="margin-bottom:6px;display:inline-block">Prośba o zamknięcie</span>
-                            @endif
-                            <div>{!! nl2br(e($comment->body)) !!}</div>
-                        </div>
+                        @else
+                            <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+                                @if($t === \App\Enums\CommentType::Internal) background:var(--c-amber-bg);border-color:#fcd97e;
+                                @elseif($t === \App\Enums\CommentType::CloseRequest) background:var(--c-orange-bg);border-color:#fdba74; @endif">
+                                <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px">
+                                    <strong>{{ $comment->author?->name }}</strong>
+                                    <span class="muted" style="font-size:12px">{{ $comment->created_at->format('Y-m-d H:i') }}</span>
+                                </div>
+                                @if ($t === \App\Enums\CommentType::Internal)
+                                    <span class="badge badge--amber" style="margin-bottom:6px;display:inline-block">Notatka wewnętrzna</span>
+                                @elseif ($t === \App\Enums\CommentType::CloseRequest)
+                                    <span class="badge badge--orange" style="margin-bottom:6px;display:inline-block">Prośba o zamknięcie</span>
+                                @endif
+                                <div>{!! nl2br(e($comment->body)) !!}</div>
+                            </div>
+                        @endif
                     @empty
                         <p class="muted">Brak odpowiedzi.</p>
                     @endforelse
