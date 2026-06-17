@@ -111,7 +111,7 @@
                         <span>@if($ticket->priority)<span class="badge badge--{{ $ticket->priority->color }}">{{ $ticket->priority->name }}</span>@else — @endif</span></div>
                     <div class="list-row"><span class="muted">Kategoria</span><span>{{ $ticket->category?->name ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Opiekun</span><span>{{ $ticket->assignedSupport?->name ?? '—' }}</span></div>
-                    <div class="list-row"><span class="muted">Lokalizacja</span><span>{{ $ticket->location?->name ?? '—' }}</span></div>
+                    <div class="list-row"><span class="muted">Lokalizacja</span><span>{{ $ticket->location?->pathLabel() ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Zasób</span><span>{{ $ticket->asset?->name ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Ostatnia odpowiedź</span><span>{{ $ticket->last_reply_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
                     @if($ticket->closed_at)

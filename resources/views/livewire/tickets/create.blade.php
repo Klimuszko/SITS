@@ -49,7 +49,7 @@
                         <select id="location_id" class="select" wire:model="location_id" @disabled(!$organization_id)>
                             <option value="">— brak —</option>
                             @foreach ($locations as $location)
-                                <option value="{{ $location->id }}">{{ $location->name }}</option>
+                                <option value="{{ $location->id }}">{{ $location->pathLabel() }}</option>
                             @endforeach
                         </select>
                     </div>

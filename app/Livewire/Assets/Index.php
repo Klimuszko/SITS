@@ -6,6 +6,7 @@ use App\Enums\AssetStatus;
 use App\Enums\OrgRole;
 use App\Models\Asset;
 use App\Models\AssetCategory;
+use App\Models\Location;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Layout;
@@ -52,7 +53,7 @@ class Index extends Component
     protected function scopedQuery(): Builder
     {
         $user = auth()->user();
-        $query = Asset::query()->with(['organization', 'category', 'location', 'parent']);
+        $query = Asset::query()->with(['organization', 'category', 'parent']);
 
         if ($user->isAdminLevel()) {
             // pełny zakres
@@ -122,8 +123,13 @@ class Index extends Component
 
         $assets = $query->orderBy('name')->paginate(15);
 
+        // Pełne ścieżki lokalizacji dla zasobów z bieżącej strony — jednym zapytaniem
+        // (mapa id → ścieżka), bez N+1 przy chodzeniu po rodzicach w pętli widoku.
+        $locationPaths = Location::pathMapForIds($assets->pluck('location_id'));
+
         return view('livewire.assets.index', [
             'assets' => $assets,
+            'locationPaths' => $locationPaths,
             'organizations' => $this->filterOrganizations(),
             'categories' => AssetCategory::active()->orderBy('name')->get(),
             'statuses' => AssetStatus::options(),

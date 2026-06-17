@@ -31,7 +31,7 @@ return [
     'location_type' => [
         'building' => 'Budynek',
         'floor' => 'Piętro',
-        'room' => 'Pokój',
+        'room' => 'Pomieszczenie',
         'server_room' => 'Serwerownia',
         'rack' => 'Rack',
         'other' => 'Inne',

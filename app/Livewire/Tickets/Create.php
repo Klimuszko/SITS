@@ -109,7 +109,7 @@ class Create extends Component
         return view('livewire.tickets.create', [
             'organizations' => $this->availableOrganizations(),
             'locations' => $orgId
-                ? Location::where('organization_id', $orgId)->orderBy('name')->get()
+                ? Location::treeForOrganization($orgId)
                 : collect(),
             'assets' => $orgId
                 ? Asset::where('organization_id', $orgId)->active()->where('is_private', false)->orderBy('name')->get()

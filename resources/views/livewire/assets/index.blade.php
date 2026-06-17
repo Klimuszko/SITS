@@ -57,7 +57,8 @@
                     </td>
                     <td class="muted">{{ $asset->organization?->name }}</td>
                     <td class="muted">{{ $asset->category?->name ?? '—' }}</td>
-                    <td class="muted">{{ $asset->location?->name ?? '—' }}</td>
+                    @php($locationPath = $asset->location_id ? ($locationPaths[$asset->location_id] ?? null) : null)
+                    <td class="muted" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" @if($locationPath) title="{{ $locationPath }}" @endif>{{ $locationPath ?? '—' }}</td>
                     <td><span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span></td>
                     <td class="muted">{{ $asset->parent?->name ?? '—' }}</td>
                 </tr>
