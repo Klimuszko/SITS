@@ -19,6 +19,9 @@
                 <a href="{{ route('dashboard') }}" wire:navigate class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">Pulpit</a>
                 <a href="{{ route('tickets.index') }}" wire:navigate class="{{ request()->routeIs('tickets.*') ? 'active' : '' }}">Zgłoszenia</a>
                 <a href="{{ route('organizations.index') }}" wire:navigate class="{{ request()->routeIs('organizations.*') ? 'active' : '' }}">Organizacje</a>
+                @can('manage-users')
+                    <a href="{{ route('users.index') }}" wire:navigate class="{{ request()->routeIs('users.*') ? 'active' : '' }}">Użytkownicy</a>
+                @endcan
                 <a href="{{ route('assets.index') }}" wire:navigate class="{{ request()->routeIs('assets.*') ? 'active' : '' }}">Zasoby</a>
                 <a href="{{ route('locations.index') }}" wire:navigate class="{{ request()->routeIs('locations.*') ? 'active' : '' }}">Lokalizacje</a>
 

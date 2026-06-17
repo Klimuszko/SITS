@@ -17,6 +17,7 @@ use App\Policies\KnowledgeArticlePolicy;
 use App\Policies\LocationPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\TicketPolicy;
+use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +25,7 @@ class AuthServiceProvider extends ServiceProvider
 {
     /** @var array<class-string,class-string> */
     protected array $policies = [
+        User::class => UserPolicy::class,
         Organization::class => OrganizationPolicy::class,
         Ticket::class => TicketPolicy::class,
         Asset::class => AssetPolicy::class,

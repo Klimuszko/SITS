@@ -4,11 +4,14 @@ namespace App\Models;
 
 use App\Enums\ManagerScope;
 use App\Enums\OrgRole;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrganizationMembership extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'organization_id',
