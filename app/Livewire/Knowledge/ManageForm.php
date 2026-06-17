@@ -54,20 +54,12 @@ class ManageForm extends Component
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'slug' => [
-                'nullable', 'string', 'max:255',
-                Rule::unique('knowledge_articles', 'slug')->ignore($this->article?->id),
-            ],
+            // Unikalność sluga gwarantuje uniqueSlug() przy zapisie (auto-sufiks -2, -3, …),
+            // więc tutaj NIE walidujemy unique — inaczej duplikat byłby odrzucany zamiast suffiksowany.
+            'slug' => ['nullable', 'string', 'max:255'],
             'knowledge_category_id' => ['nullable', 'integer', 'exists:knowledge_categories,id'],
             'body' => ['nullable', 'string'],
             'status' => ['required', Rule::enum(PublicationStatus::class)],
-        ];
-    }
-
-    protected function messages(): array
-    {
-        return [
-            'slug.unique' => 'Ten odnośnik (slug) jest już zajęty.',
         ];
     }
 

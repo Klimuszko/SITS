@@ -8,7 +8,6 @@ use App\Livewire\Knowledge\ManageForm;
 use App\Models\KnowledgeArticle;
 use App\Models\Organization;
 use App\Models\User;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -175,8 +174,7 @@ class KnowledgeManageFormTest extends TestCase
         $client = User::factory()->create(); // rola User (klient)
         $this->actingAs($client);
 
-        $this->expectException(AuthorizationException::class);
-        Livewire::test(ManageForm::class);
+        Livewire::test(ManageForm::class)->assertForbidden();
     }
 
     public function test_manager_cannot_create_article(): void
@@ -184,7 +182,6 @@ class KnowledgeManageFormTest extends TestCase
         $manager = User::factory()->manager()->create();
         $this->actingAs($manager);
 
-        $this->expectException(AuthorizationException::class);
-        Livewire::test(ManageForm::class);
+        Livewire::test(ManageForm::class)->assertForbidden();
     }
 }
