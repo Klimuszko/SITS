@@ -77,6 +77,12 @@ class Asset extends Model
         return $this->hasMany(AssetFieldValue::class);
     }
 
+    /** Wpisy grup powtarzalnych (kandydaci na pod-zasoby) — wartości w asset_group_entry_values. */
+    public function groupEntries(): HasMany
+    {
+        return $this->hasMany(AssetGroupEntry::class)->orderBy('order');
+    }
+
     /* --------------------------- Relacje -------------------------- */
 
     /** Relacje wychodzące (asset -> related_asset). */

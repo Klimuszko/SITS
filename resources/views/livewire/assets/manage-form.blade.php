@@ -96,66 +96,48 @@
 
         {{-- ------------------------- Pola dynamiczne kategorii ------------------------- --}}
         @if ($asset_category_id)
-            <div class="card" style="margin-top:18px">
-                <div class="card__head">Pola kategorii</div>
-                <div class="card__body">
-                    @if ($fields->isEmpty())
-                        <p class="muted" style="margin:0">Ta kategoria nie ma dodatkowych pól do wypełnienia.</p>
-                    @else
+            {{-- Pola bez sekcji (kategorie „płaskie” ze Step 3). --}}
+            @if ($looseFields->isNotEmpty())
+                <div class="card" style="margin-top:18px">
+                    <div class="card__head">Pola kategorii</div>
+                    <div class="card__body">
                         <div class="form-grid">
-                            @foreach ($fields as $field)
-                                @php($key = 'fieldValues.'.$field->id)
-                                <div class="field {{ in_array($field->type, [\App\Enums\AssetFieldType::Textarea], true) ? 'field--full' : '' }}">
-                                    @if ($field->type === \App\Enums\AssetFieldType::Boolean)
-                                        <label class="checkbox">
-                                            <input type="checkbox" wire:model="fieldValues.{{ $field->id }}">
-                                            <span>{{ $field->name }}</span>
-                                        </label>
-                                    @else
-                                        <label for="field_{{ $field->id }}">
-                                            {{ $field->name }}@if ($field->is_required) * @endif
-                                        </label>
-
-                                        @switch($field->type)
-                                            @case(\App\Enums\AssetFieldType::Textarea)
-                                                <textarea id="field_{{ $field->id }}" class="textarea" rows="3" wire:model="fieldValues.{{ $field->id }}"></textarea>
-                                                @break
-
-                                            @case(\App\Enums\AssetFieldType::Select)
-                                                <select id="field_{{ $field->id }}" class="select" wire:model="fieldValues.{{ $field->id }}">
-                                                    <option value="">— wybierz —</option>
-                                                    @foreach ($field->options ?? [] as $option)
-                                                        <option value="{{ $option }}">{{ $option }}</option>
-                                                    @endforeach
-                                                </select>
-                                                @break
-
-                                            @case(\App\Enums\AssetFieldType::Number)
-                                                <input id="field_{{ $field->id }}" type="number" step="any" class="input" wire:model="fieldValues.{{ $field->id }}">
-                                                @break
-
-                                            @case(\App\Enums\AssetFieldType::Date)
-                                                <input id="field_{{ $field->id }}" type="date" class="input" wire:model="fieldValues.{{ $field->id }}">
-                                                @break
-
-                                            @default
-                                                <input id="field_{{ $field->id }}" class="input" wire:model="fieldValues.{{ $field->id }}">
-                                        @endswitch
-                                    @endif
-
-                                    @error($key) <span class="error">{{ $message }}</span> @enderror
-                                </div>
+                            @foreach ($looseFields as $field)
+                                @include('livewire.assets._field', [
+                                    'field' => $field,
+                                    'model' => 'values.'.$field->id,
+                                    'key' => 'values.'.$field->id,
+                                    'id' => 'field_'.$field->id,
+                                ])
                             @endforeach
                         </div>
-                    @endif
-
-                    @if ($hasSkippedFields)
-                        <p class="hint" style="margin-top:12px">
-                            Niektóre pola (pliki / relacje) nie są jeszcze obsługiwane w tym widoku i zostały pominięte.
-                        </p>
-                    @endif
+                    </div>
                 </div>
-            </div>
+            @endif
+
+            {{-- Sekcje, podsekcje i grupy powtarzalne w kolejności struktury. --}}
+            @foreach ($tree as $node)
+                <div class="card" style="margin-top:18px" wire:key="section-{{ $node->id }}">
+                    <div class="card__head">{{ $node->name }}</div>
+                    <div class="card__body">
+                        @include('livewire.assets._form-section', ['node' => $node, 'depth' => 0])
+                    </div>
+                </div>
+            @endforeach
+
+            @if ($tree->isEmpty() && $looseFields->isEmpty())
+                <div class="card" style="margin-top:18px">
+                    <div class="card__body">
+                        <p class="muted" style="margin:0">Ta kategoria nie ma dodatkowych pól do wypełnienia.</p>
+                    </div>
+                </div>
+            @endif
+
+            @if ($hasSkippedFields)
+                <p class="hint" style="margin-top:12px">
+                    Niektóre pola (pliki / relacje) nie są jeszcze obsługiwane w tym widoku i zostały pominięte.
+                </p>
+            @endif
         @endif
 
         <div style="margin-top:18px;display:flex;gap:10px">

@@ -5,7 +5,9 @@ namespace App\Livewire\Assets;
 use App\Enums\AssetFieldType;
 use App\Models\Asset;
 use App\Models\AssetField;
+use App\Models\AssetSection;
 use App\Services\AssetService;
+use App\Services\AssetStructure;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -33,31 +35,117 @@ class Show extends Component
         session()->flash('status', 'Zasób został zarchiwizowany.');
     }
 
-    /**
-     * Pary [etykieta, wartość-do-wyświetlenia] dla aktywnych pól kategorii.
-     * Pomija typy file/relation (nieobsługiwane w v1).
-     *
-     * @return Collection<int,array{label:string,value:string}>
-     */
-    protected function fieldDisplay(): Collection
+    protected function structure(): AssetStructure
     {
-        $fields = AssetField::query()
-            ->where('asset_category_id', $this->asset->asset_category_id)
-            ->where('is_active', true)
-            ->orderBy('order')
+        return app(AssetStructure::class);
+    }
+
+    /**
+     * Drzewo sekcji do prezentacji. Każdy węzeł:
+     *  - 'section'  => AssetSection,
+     *  - 'fields'   => [ ['label'=>, 'value'=>], ... ] (tylko sekcje niepowtarzalne),
+     *  - 'group'    => null | ['columns'=>[AssetField], 'rows'=>[ ['label'=>, 'cells'=>[fieldId=>str]] ]],
+     *  - 'children' => Collection (rekurencyjnie).
+     *
+     * @return Collection<int,array<string,mixed>>
+     */
+    protected function sectionTree(): Collection
+    {
+        $category = $this->asset->category;
+        if (! $category) {
+            return collect();
+        }
+
+        $tree = $this->structure()->tree($category);
+
+        // Wartości pól pojedynczych zasobu.
+        $singleValues = $this->asset->fieldValues()->get()->keyBy('asset_field_id');
+
+        // Wpisy grup zasobu (z wartościami), pogrupowane po sekcji.
+        $entriesBySection = $this->asset->groupEntries()
+            ->with('values')
             ->get()
-            ->reject(fn (AssetField $f) => in_array($f->type, [AssetFieldType::File, AssetFieldType::Relation], true));
+            ->groupBy('asset_section_id');
 
-        $values = $this->asset->fieldValues()->get()->keyBy('asset_field_id');
+        $map = function (AssetSection $node) use (&$map, $singleValues, $entriesBySection) {
+            if ($node->is_repeatable) {
+                return [
+                    'section' => $node,
+                    'fields' => collect(),
+                    'group' => $this->buildGroupTable($node, $entriesBySection->get($node->id) ?? collect()),
+                    'children' => $node->childNodes->map(fn (AssetSection $c) => $map($c))->values(),
+                ];
+            }
 
-        return $fields->map(function (AssetField $field) use ($values) {
-            $raw = $values->get($field->id)?->value;
+            $fields = $node->activeFields->map(function (AssetField $field) use ($singleValues) {
+                return [
+                    'label' => $field->name,
+                    'value' => $this->castForDisplay($field, $singleValues->get($field->id)?->value),
+                ];
+            })->values();
 
             return [
-                'label' => $field->name,
-                'value' => $this->castForDisplay($field, $raw),
+                'section' => $node,
+                'fields' => $fields,
+                'group' => null,
+                'children' => $node->childNodes->map(fn (AssetSection $c) => $map($c))->values(),
             ];
-        })->values();
+        };
+
+        $nodes = $tree->map(fn (AssetSection $n) => $map($n))->values();
+
+        // Pola pojedyncze bez sekcji (kategorie „płaskie” ze Step 3) — wirtualna sekcja.
+        $looseFields = $this->structure()->singleFields($category)
+            ->filter(fn (AssetField $f) => $f->asset_section_id === null)
+            ->map(function (AssetField $field) use ($singleValues) {
+                return [
+                    'label' => $field->name,
+                    'value' => $this->castForDisplay($field, $singleValues->get($field->id)?->value),
+                ];
+            })->values();
+
+        if ($looseFields->isNotEmpty()) {
+            $loose = new AssetSection(['name' => 'Pola kategorii']);
+
+            $nodes->push([
+                'section' => $loose,
+                'fields' => $looseFields,
+                'group' => null,
+                'children' => collect(),
+            ]);
+        }
+
+        return $nodes;
+    }
+
+    /**
+     * Buduje tabelę dla grupy powtarzalnej: kolumny = aktywne pola grupy,
+     * wiersze = wpisy zasobu (po jednym na asset_group_entry).
+     *
+     * @param  Collection<int,\App\Models\AssetGroupEntry>  $entries
+     * @return array{columns:Collection<int,AssetField>,rows:Collection<int,array<string,mixed>>}
+     */
+    protected function buildGroupTable(AssetSection $group, Collection $entries): array
+    {
+        $columns = $group->activeFields;
+
+        $rows = $entries->sortBy('order')->values()->map(function ($entry) use ($group, $columns) {
+            $valuesByField = $entry->values->keyBy('asset_field_id');
+
+            $cells = [];
+            foreach ($columns as $field) {
+                $cells[$field->id] = $this->castForDisplay($field, $valuesByField->get($field->id)?->value);
+            }
+
+            $entry->setRelation('section', $group);
+
+            return [
+                'label' => $entry->displayLabel(),
+                'cells' => $cells,
+            ];
+        });
+
+        return ['columns' => $columns, 'rows' => $rows];
     }
 
     /** Rzutuje surową wartość na czytelny tekst wg typu pola. */
@@ -79,7 +167,7 @@ class Show extends Component
         $this->asset->load(['organization', 'category', 'location', 'parent', 'createdBy']);
 
         return view('livewire.assets.show', [
-            'fields' => $this->fieldDisplay(),
+            'sectionTree' => $this->sectionTree(),
             'history' => $this->asset->history()->with('user')->get(),
             'canUpdate' => $user->can('update', $this->asset),
             'canArchive' => $user->can('archive', $this->asset),

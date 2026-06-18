@@ -7,8 +7,12 @@ use App\Enums\AuditAction;
 use App\Models\Asset;
 use App\Models\AssetField;
 use App\Models\AssetFieldValue;
+use App\Models\AssetGroupEntry;
+use App\Models\AssetGroupEntryValue;
 use App\Models\AssetHistory;
+use App\Models\AssetSection;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,14 +25,17 @@ use Illuminate\Support\Facades\DB;
 class AssetService
 {
     /**
-     * Tworzy zasób, zapisuje wartości pól, wpis historii (created) oraz audyt.
+     * Tworzy zasób, zapisuje wartości pól (pojedyncze + grupy powtarzalne),
+     * wpis historii (created) oraz audyt.
      *
-     * @param  array<string,mixed>  $data         pola rdzeniowe zasobu
-     * @param  array<int,mixed>     $fieldValues  [asset_field_id => surowa wartość]
+     * @param  array<string,mixed>  $data          pola rdzeniowe zasobu
+     * @param  array<int,mixed>     $fieldValues   [asset_field_id => surowa wartość] (pola pojedyncze)
+     * @param  array<int,array<int,array{id?:int|null,values:array<int,mixed>}>>  $groupData
+     *         [asset_section_id => [ ['id'=>?entryId, 'values'=>[asset_field_id=>wartość]], ... ] ]
      */
-    public function create(User $actor, array $data, array $fieldValues = []): Asset
+    public function create(User $actor, array $data, array $fieldValues = [], array $groupData = []): Asset
     {
-        return DB::transaction(function () use ($actor, $data, $fieldValues) {
+        return DB::transaction(function () use ($actor, $data, $fieldValues, $groupData) {
             $asset = Asset::create([
                 'organization_id' => $data['organization_id'],
                 'location_id' => $data['location_id'] ?? null,
@@ -43,6 +50,7 @@ class AssetService
             ]);
 
             $this->persistFieldValues($asset, $fieldValues);
+            $this->reconcileGroups($asset, $groupData);
 
             AssetHistory::create([
                 'asset_id' => $asset->id,
@@ -66,11 +74,13 @@ class AssetService
      * zmiany zapisuje wiersz historii (field_updated) i pojedynczy audyt AssetUpdated.
      *
      * @param  array<string,mixed>  $data
-     * @param  array<int,mixed>     $fieldValues  [asset_field_id => surowa wartość]
+     * @param  array<int,mixed>     $fieldValues  [asset_field_id => surowa wartość] (pola pojedyncze)
+     * @param  array<int,array<int,array{id?:int|null,values:array<int,mixed>}>>  $groupData
+     *         [asset_section_id => [ ['id'=>?entryId, 'values'=>[asset_field_id=>wartość]], ... ] ]
      */
-    public function update(Asset $asset, array $data, array $fieldValues, User $actor): Asset
+    public function update(Asset $asset, array $data, array $fieldValues, User $actor, array $groupData = []): Asset
     {
-        return DB::transaction(function () use ($asset, $data, $fieldValues, $actor) {
+        return DB::transaction(function () use ($asset, $data, $fieldValues, $actor, $groupData) {
             $changes = [];
 
             // --- Pola rdzeniowe ---
@@ -126,6 +136,12 @@ class AssetService
 
                 $this->recordHistory($asset, $actor, $field->key, $oldValue, (string) $raw);
                 $changes[$field->key] = ['old' => $oldValue, 'new' => (string) $raw];
+            }
+
+            // --- Grupy powtarzalne (reconcile: dodaj/aktualizuj/usuń wpisy) ---
+            if ($this->reconcileGroups($asset, $groupData)) {
+                $this->recordHistory($asset, $actor, 'groups', null, 'updated');
+                $changes['groups'] = ['old' => null, 'new' => 'updated'];
             }
 
             if ($changes !== []) {
@@ -193,14 +209,167 @@ class AssetService
         }
     }
 
+    /**
+     * Uzgadnia wpisy grup powtarzalnych zasobu z przesłanym zestawem ($groupData):
+     *  - nowe wiersze (bez id) → tworzy,
+     *  - istniejące (z id) → aktualizuje, po sprawdzeniu WŁASNOŚCI
+     *    (entry.asset_id == asset && entry.asset_section_id == ta grupa),
+     *  - wpisy nieobecne w zestawie → usuwa (kaskada wartości przez FK),
+     *  - `order` z pozycji w tablicy.
+     *
+     * Przetwarza WYŁĄCZNIE aktywne sekcje powtarzalne należące do kategorii zasobu;
+     * nieznane/obce asset_section_id są ignorowane. Obce id wpisów są pomijane
+     * (traktowane jak nowy wiersz nie jest — wiersz jest po prostu pomijany).
+     *
+     * @param  array<int,array<int,array{id?:int|null,values:array<int,mixed>}>>  $groupData
+     * @return bool  czy cokolwiek zmieniono (utworzono / zaktualizowano / usunięto)
+     */
+    protected function reconcileGroups(Asset $asset, array $groupData): bool
+    {
+        $groups = $this->categoryRepeatableSections($asset);
+
+        if ($groups->isEmpty()) {
+            return false;
+        }
+
+        $changed = false;
+
+        foreach ($groups as $section) {
+            $rows = $groupData[$section->id] ?? [];
+            $fields = $section->relationLoaded('activeFields')
+                ? $section->getRelation('activeFields')
+                : $this->sectionFields($section->id);
+
+            // Istniejące wpisy tej grupy dla tego zasobu (źródło prawdy własności).
+            $existing = AssetGroupEntry::query()
+                ->where('asset_id', $asset->id)
+                ->where('asset_section_id', $section->id)
+                ->get()
+                ->keyBy('id');
+
+            $keptIds = [];
+
+            foreach (array_values($rows) as $index => $row) {
+                $entryId = $row['id'] ?? null;
+                $values = $row['values'] ?? [];
+
+                if ($entryId !== null) {
+                    // Aktualizacja istniejącego — tylko jeśli należy do tego zasobu i tej grupy.
+                    $entry = $existing->get((int) $entryId);
+                    if ($entry === null) {
+                        // Obce / nieistniejące id — pomijamy (ochrona własności).
+                        continue;
+                    }
+
+                    if ($entry->order !== $index) {
+                        $entry->order = $index;
+                        $entry->save();
+                        $changed = true;
+                    }
+                } else {
+                    $entry = AssetGroupEntry::create([
+                        'asset_id' => $asset->id,
+                        'asset_section_id' => $section->id,
+                        'order' => $index,
+                    ]);
+                    $changed = true;
+                }
+
+                $keptIds[] = $entry->id;
+
+                if ($this->persistGroupEntryValues($entry, $fields, $values)) {
+                    $changed = true;
+                }
+            }
+
+            // Usuwamy wpisy, których nie ma w przesłanym zestawie. Wartości kasujemy
+            // jawnie (nie polegamy na kaskadzie FK — sqlite w testach bywa bez pragm).
+            foreach ($existing as $id => $entry) {
+                if (! in_array($id, $keptIds, true)) {
+                    AssetGroupEntryValue::where('asset_group_entry_id', $entry->id)->delete();
+                    $entry->delete();
+                    $changed = true;
+                }
+            }
+        }
+
+        return $changed;
+    }
+
+    /**
+     * Upsert wartości pojedynczego wpisu grupy. Tylko aktywne pola tej grupy.
+     *
+     * @param  Collection<int,AssetField>  $fields
+     * @param  array<int,mixed>            $values  [asset_field_id => surowa wartość]
+     * @return bool  czy jakakolwiek wartość uległa zmianie
+     */
+    protected function persistGroupEntryValues(AssetGroupEntry $entry, Collection $fields, array $values): bool
+    {
+        $changed = false;
+
+        foreach ($fields as $field) {
+            if (! array_key_exists($field->id, $values)) {
+                continue;
+            }
+
+            $raw = $this->normalizeValue($field, $values[$field->id]);
+
+            $existing = AssetGroupEntryValue::query()
+                ->where('asset_group_entry_id', $entry->id)
+                ->where('asset_field_id', $field->id)
+                ->first();
+
+            if ($existing && (string) $existing->value === (string) $raw) {
+                continue;
+            }
+
+            AssetGroupEntryValue::updateOrCreate(
+                ['asset_group_entry_id' => $entry->id, 'asset_field_id' => $field->id],
+                ['value' => (string) $raw],
+            );
+
+            $changed = true;
+        }
+
+        return $changed;
+    }
+
     /** Aktywne pola należące do kategorii danego zasobu (po kluczu kategorii). */
-    protected function categoryFields(Asset $asset): \Illuminate\Support\Collection
+    protected function categoryFields(Asset $asset): Collection
     {
         return AssetField::query()
             ->where('asset_category_id', $asset->asset_category_id)
             ->where('is_active', true)
             ->orderBy('order')
             ->get();
+    }
+
+    /** Aktywne sekcje powtarzalne kategorii zasobu, z dociążonymi aktywnymi polami. */
+    protected function categoryRepeatableSections(Asset $asset): Collection
+    {
+        return AssetSection::query()
+            ->where('asset_category_id', $asset->asset_category_id)
+            ->where('is_active', true)
+            ->where('is_repeatable', true)
+            ->orderBy('order')
+            ->get()
+            ->map(function (AssetSection $section) {
+                $section->setRelation('activeFields', $this->sectionFields($section->id));
+
+                return $section;
+            });
+    }
+
+    /** Aktywne, renderowalne pola danej sekcji (pomija file/relation). */
+    protected function sectionFields(int $sectionId): Collection
+    {
+        return AssetField::query()
+            ->where('asset_section_id', $sectionId)
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->get()
+            ->reject(fn (AssetField $f) => in_array($f->type, AssetStructure::SKIPPED_TYPES, true))
+            ->values();
     }
 
     /** Normalizuje surową wartość do stringa zgodnie z typem pola. */

@@ -39,17 +39,22 @@
                 </div>
             </div>
 
-            {{-- Pola kategorii --}}
-            <div class="card">
-                <div class="card__head">Pola kategorii</div>
-                <div class="card__body stack" style="gap:8px;font-size:14px">
-                    @forelse ($fields as $field)
-                        <div class="list-row"><span class="muted">{{ $field['label'] }}</span><span>{{ $field['value'] }}</span></div>
-                    @empty
-                        <p class="muted" style="margin:0">Brak dodatkowych pól dla tej kategorii.</p>
-                    @endforelse
+            {{-- Pola kategorii (struktura: sekcje, podsekcje, grupy powtarzalne) --}}
+            @forelse ($sectionTree as $node)
+                <div class="card">
+                    <div class="card__head">{{ $node['section']->name }}</div>
+                    <div class="card__body stack" style="gap:8px;font-size:14px">
+                        @include('livewire.assets._section', ['node' => $node, 'depth' => 0])
+                    </div>
                 </div>
-            </div>
+            @empty
+                <div class="card">
+                    <div class="card__head">Pola kategorii</div>
+                    <div class="card__body">
+                        <p class="muted" style="margin:0">Brak dodatkowych pól dla tej kategorii.</p>
+                    </div>
+                </div>
+            @endforelse
 
             {{-- Notatki --}}
             @if ($asset->notes)

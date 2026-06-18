@@ -50,7 +50,7 @@ class AssetManageFormTest extends TestCase
             ->set('organization_id', $organization->id)
             ->set('asset_category_id', $category->id)
             ->set('name', 'NAS Synology')
-            ->set('fieldValues.'.$field->id, 'SN-2026-001')
+            ->set('values.'.$field->id, 'SN-2026-001')
             ->call('save')
             ->assertHasNoErrors();
 
@@ -75,9 +75,9 @@ class AssetManageFormTest extends TestCase
             ->set('organization_id', $organization->id)
             ->set('asset_category_id', $category->id)
             ->set('name', 'Bez numeru')
-            ->set('fieldValues.'.$field->id, '')
+            ->set('values.'.$field->id, '')
             ->call('save')
-            ->assertHasErrors(['fieldValues.'.$field->id => 'required']);
+            ->assertHasErrors(['values.'.$field->id => 'required']);
 
         $this->assertDatabaseMissing('assets', ['name' => 'Bez numeru']);
     }
@@ -92,7 +92,7 @@ class AssetManageFormTest extends TestCase
             ->set('organization_id', $otherOrg->id)
             ->set('asset_category_id', $category->id)
             ->set('name', 'Obcy zasób')
-            ->set('fieldValues.'.$field->id, 'X')
+            ->set('values.'.$field->id, 'X')
             ->call('save')
             ->assertHasErrors(['organization_id']);
 

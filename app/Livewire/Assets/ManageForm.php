@@ -7,9 +7,11 @@ use App\Enums\AssetStatus;
 use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\AssetField;
+use App\Models\AssetSection;
 use App\Models\Location;
 use App\Models\Organization;
 use App\Services\AssetService;
+use App\Services\AssetStructure;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -34,11 +36,19 @@ class ManageForm extends Component
     public ?string $notes = null;
 
     /**
-     * Wartości pól dynamicznych, kluczowane po asset_field_id.
+     * Wartości pól pojedynczych (sekcje NIEpowtarzalne), kluczowane po asset_field_id.
      *
      * @var array<int,mixed>
      */
-    public array $fieldValues = [];
+    public array $values = [];
+
+    /**
+     * Wpisy grup powtarzalnych:
+     *  [asset_section_id => [ index => ['id'=>?entryId, 'values'=>[asset_field_id=>wartość]] ] ].
+     *
+     * @var array<int,array<int,array{id:int|null,values:array<int,mixed>}>>
+     */
+    public array $groups = [];
 
     public function mount(?Asset $asset = null): void
     {
@@ -53,7 +63,7 @@ class ManageForm extends Component
             $this->status = $asset->status->value;
             $this->is_private = (bool) $asset->is_private;
 
-            $this->loadExistingFieldValues();
+            $this->loadExistingValues();
         } else {
             $this->authorize('create', Asset::class);
 
@@ -62,6 +72,20 @@ class ManageForm extends Component
                 $this->organization_id = $orgs->first()->id;
             }
         }
+    }
+
+    protected function structure(): AssetStructure
+    {
+        return app(AssetStructure::class);
+    }
+
+    protected function category(): ?AssetCategory
+    {
+        if (! $this->asset_category_id) {
+            return null;
+        }
+
+        return AssetCategory::find($this->asset_category_id);
     }
 
     /** Organizacje, w których bieżący użytkownik może zarządzać zasobami. */
@@ -76,26 +100,34 @@ class ManageForm extends Component
         };
     }
 
-    /** Aktywne pola wybranej kategorii, posortowane wg kolejności. */
-    protected function categoryFields(): Collection
+    /** Pola pojedyncze (sekcje niepowtarzalne) aktywne dla wybranej kategorii. */
+    protected function singleFields(): Collection
     {
-        if (! $this->asset_category_id) {
-            return collect();
-        }
+        $category = $this->category();
 
-        return AssetField::query()
-            ->where('asset_category_id', $this->asset_category_id)
-            ->where('is_active', true)
-            ->orderBy('order')
-            ->get();
+        return $category ? $this->structure()->singleFields($category) : collect();
     }
 
-    /** Pola obsługiwane w v1 (bez file/relation — patrz Known Gaps). */
-    protected function renderableFields(): Collection
+    /** Aktywne grupy powtarzalne (z dociążonymi polami) wybranej kategorii. */
+    protected function repeatableGroups(): Collection
     {
-        return $this->categoryFields()->reject(
-            fn (AssetField $f) => in_array($f->type, [AssetFieldType::File, AssetFieldType::Relation], true),
-        )->values();
+        $category = $this->category();
+
+        return $category ? $this->structure()->repeatableGroups($category) : collect();
+    }
+
+    /** Drzewo aktywnych sekcji wybranej kategorii (do renderowania z zagnieżdżeniem). */
+    protected function tree(): Collection
+    {
+        $category = $this->category();
+
+        return $category ? $this->structure()->tree($category) : collect();
+    }
+
+    /** Pola pojedyncze BEZ sekcji (kategorie „płaskie” ze Step 3). */
+    protected function looseSingleFields(): Collection
+    {
+        return $this->singleFields()->filter(fn (AssetField $f) => $f->asset_section_id === null)->values();
     }
 
     /** Reset pól zależnych po zmianie organizacji. */
@@ -104,43 +136,153 @@ class ManageForm extends Component
         $this->location_id = null;
         $this->parent_asset_id = null;
         $this->asset_category_id = null;
-        $this->fieldValues = [];
+        $this->values = [];
+        $this->groups = [];
     }
 
-    /** Po zmianie kategorii przebuduj zestaw wartości pól dynamicznych. */
+    /** Po zmianie kategorii przebuduj zestaw pól pojedynczych i grup. */
     public function updatedAssetCategoryId(): void
     {
-        $this->fieldValues = [];
-        $this->seedFieldValueDefaults();
+        $this->values = [];
+        $this->groups = [];
+        $this->seedSingleDefaults();
+        $this->seedGroupMinimums();
     }
 
-    /** Inicjalizuje klucze fieldValues (boolean = false, reszta = null). */
-    protected function seedFieldValueDefaults(): void
+    /** Inicjalizuje klucze $values wartościami domyślnymi pól pojedynczych. */
+    protected function seedSingleDefaults(): void
     {
-        foreach ($this->renderableFields() as $field) {
-            $this->fieldValues[$field->id] = $field->type === AssetFieldType::Boolean ? false : null;
+        foreach ($this->singleFields() as $field) {
+            $this->values[$field->id] = $this->defaultFor($field);
         }
     }
 
-    /** Wczytuje istniejące wartości pól (edycja) z castowaniem typu boolean. */
-    protected function loadExistingFieldValues(): void
+    /** Domyślna wartość pola: boolean → bool z default_value, reszta → default_value|null. */
+    protected function defaultFor(AssetField $field): mixed
     {
-        $this->seedFieldValueDefaults();
+        if ($field->type === AssetFieldType::Boolean) {
+            return $field->default_value === '1' || $field->default_value === 'true';
+        }
+
+        return $field->default_value !== null && $field->default_value !== '' ? $field->default_value : null;
+    }
+
+    /** Pusty zestaw wartości dla nowego wiersza grupy (z wartościami domyślnymi pól). */
+    protected function blankRow(AssetSection $group): array
+    {
+        $values = [];
+        foreach ($group->activeFields as $field) {
+            $values[$field->id] = $this->defaultFor($field);
+        }
+
+        return ['id' => null, 'values' => $values];
+    }
+
+    /**
+     * Dla NOWEGO zasobu: jeśli grupa wymaga min_entries, zaczynamy od tylu pustych
+     * wierszy (min. 1, gdy min_entries > 0). Bez wymogu → 0 wierszy (brak pustych bloków).
+     */
+    protected function seedGroupMinimums(): void
+    {
+        foreach ($this->repeatableGroups() as $group) {
+            $min = $group->min_entries ?? 0;
+            $rows = [];
+            for ($i = 0; $i < $min; $i++) {
+                $rows[$i] = $this->blankRow($group);
+            }
+            $this->groups[$group->id] = $rows;
+        }
+    }
+
+    /** Wczytuje istniejące wartości (edycja): pola pojedyncze + wpisy grup. */
+    protected function loadExistingValues(): void
+    {
+        $this->seedSingleDefaults();
 
         $stored = $this->asset->fieldValues()->get()->keyBy('asset_field_id');
 
-        foreach ($this->renderableFields() as $field) {
+        foreach ($this->singleFields() as $field) {
             $value = $stored->get($field->id)?->value;
 
             if ($value === null) {
                 continue;
             }
 
-            $this->fieldValues[$field->id] = $field->type === AssetFieldType::Boolean
+            $this->values[$field->id] = $field->type === AssetFieldType::Boolean
                 ? ($value === '1')
                 : $value;
         }
+
+        // Grupy powtarzalne: wpisy zasobu pogrupowane po sekcji, w kolejności `order`.
+        $entriesBySection = $this->asset->groupEntries()
+            ->with('values')
+            ->get()
+            ->groupBy('asset_section_id');
+
+        foreach ($this->repeatableGroups() as $group) {
+            $rows = [];
+            $entries = ($entriesBySection->get($group->id) ?? collect())->sortBy('order')->values();
+
+            foreach ($entries as $index => $entry) {
+                $valuesByField = $entry->values->keyBy('asset_field_id');
+                $rowValues = [];
+
+                foreach ($group->activeFields as $field) {
+                    $raw = $valuesByField->get($field->id)?->value;
+
+                    $rowValues[$field->id] = $field->type === AssetFieldType::Boolean
+                        ? ($raw === '1')
+                        : ($raw ?? $this->defaultFor($field));
+                }
+
+                $rows[$index] = ['id' => $entry->id, 'values' => $rowValues];
+            }
+
+            $this->groups[$group->id] = $rows;
+        }
     }
+
+    /* ----------------------------- Wiersze grup ----------------------------- */
+
+    /** Dodaje pusty wiersz do grupy (respektuje max_entries). */
+    public function addRow(int $sectionId): void
+    {
+        $group = $this->repeatableGroups()->firstWhere('id', $sectionId);
+        if (! $group) {
+            return;
+        }
+
+        $rows = array_values($this->groups[$sectionId] ?? []);
+        $max = $group->max_entries;
+
+        if ($max !== null && count($rows) >= $max) {
+            return;
+        }
+
+        $rows[] = $this->blankRow($group);
+        $this->groups[$sectionId] = $rows;
+    }
+
+    /** Usuwa wiersz grupy (respektuje min_entries). */
+    public function removeRow(int $sectionId, int $index): void
+    {
+        $group = $this->repeatableGroups()->firstWhere('id', $sectionId);
+        if (! $group) {
+            return;
+        }
+
+        $rows = array_values($this->groups[$sectionId] ?? []);
+        $min = $group->min_entries ?? 0;
+
+        if (! array_key_exists($index, $rows) || count($rows) <= $min) {
+            return;
+        }
+
+        unset($rows[$index]);
+        $this->groups[$sectionId] = array_values($rows);
+    }
+
+    /* ------------------------------ Walidacja ------------------------------ */
 
     /** @return array<string,mixed> */
     protected function rules(): array
@@ -163,8 +305,34 @@ class ManageForm extends Component
             'notes' => ['nullable', 'string'],
         ];
 
-        foreach ($this->renderableFields() as $field) {
-            $rules['fieldValues.'.$field->id] = $this->fieldRules($field);
+        // Pola pojedyncze.
+        foreach ($this->singleFields() as $field) {
+            $rules['values.'.$field->id] = $this->fieldRules($field);
+        }
+
+        // Grupy powtarzalne: liczność + reguły per pole każdego wiersza.
+        foreach ($this->repeatableGroups() as $group) {
+            $rules['groups.'.$group->id] = $this->groupCountRules($group);
+
+            foreach ($group->activeFields as $field) {
+                $rules['groups.'.$group->id.'.*.values.'.$field->id] = $this->fieldRules($field);
+            }
+        }
+
+        return $rules;
+    }
+
+    /** @return array<int,mixed> Reguły liczności wpisów grupy (min/max). */
+    protected function groupCountRules(AssetSection $group): array
+    {
+        $rules = ['array'];
+
+        if ($group->min_entries !== null) {
+            $rules[] = 'min:'.$group->min_entries;
+        }
+
+        if ($group->max_entries !== null) {
+            $rules[] = 'max:'.$group->max_entries;
         }
 
         return $rules;
@@ -173,18 +341,19 @@ class ManageForm extends Component
     /** @return array<int,mixed> Reguły walidacji dla pojedynczego pola dynamicznego. */
     protected function fieldRules(AssetField $field): array
     {
-        $rules = [];
-
         if ($field->type === AssetFieldType::Boolean) {
             // Checkbox: wartość zawsze bool; "required" nie ma sensu dla false.
             return ['boolean'];
         }
 
-        $rules[] = $field->is_required ? 'required' : 'nullable';
+        $rules = [$field->is_required ? 'required' : 'nullable'];
 
         match ($field->type) {
             AssetFieldType::Number => $rules[] = 'numeric',
             AssetFieldType::Date => $rules[] = 'date',
+            AssetFieldType::Ip => $rules[] = 'ip',
+            AssetFieldType::Url => $rules[] = 'url',
+            AssetFieldType::Email => $rules[] = 'email',
             AssetFieldType::Select => $rules[] = Rule::in($field->options ?? []),
             default => $rules[] = 'string',
         };
@@ -192,6 +361,7 @@ class ManageForm extends Component
         return $rules;
     }
 
+    /** @return array<string,string> */
     protected function messages(): array
     {
         return [
@@ -202,40 +372,103 @@ class ManageForm extends Component
         ];
     }
 
+    /** @return array<string,string> */
     protected function validationAttributes(): array
     {
         $attributes = [];
 
-        foreach ($this->renderableFields() as $field) {
-            $attributes['fieldValues.'.$field->id] = $field->name;
+        foreach ($this->singleFields() as $field) {
+            $attributes['values.'.$field->id] = $field->name;
+        }
+
+        foreach ($this->repeatableGroups() as $group) {
+            $attributes['groups.'.$group->id] = $group->ticket_label ?: $group->name;
+
+            foreach ($group->activeFields as $field) {
+                $attributes['groups.'.$group->id.'.*.values.'.$field->id] = $field->name;
+            }
         }
 
         return $attributes;
     }
 
+    /* -------------------------------- Zapis -------------------------------- */
+
     public function save(AssetService $assets)
     {
-        $data = $this->validate();
+        $this->validate();
 
-        // Wartości pól ograniczamy do renderowalnych pól bieżącej kategorii.
-        $fieldValues = [];
-        foreach ($this->renderableFields() as $field) {
-            if (array_key_exists($field->id, $this->fieldValues)) {
-                $fieldValues[$field->id] = $this->fieldValues[$field->id];
-            }
-        }
+        $data = [
+            'organization_id' => $this->organization_id,
+            'location_id' => $this->location_id,
+            'asset_category_id' => $this->asset_category_id,
+            'parent_asset_id' => $this->parent_asset_id,
+            'name' => $this->name,
+            'inventory_code' => $this->inventory_code,
+            'status' => $this->status,
+            'is_private' => $this->is_private,
+            'notes' => $this->notes,
+        ];
+
+        $singleValues = $this->collectSingleValues();
+        $groupData = $this->collectGroupData();
 
         if ($this->asset && $this->asset->exists) {
             $this->authorize('update', $this->asset);
-            $asset = $assets->update($this->asset, $data, $fieldValues, auth()->user());
+            $asset = $assets->update($this->asset, $data, $singleValues, auth()->user(), $groupData);
             session()->flash('status', 'Zaktualizowano zasób.');
         } else {
             $this->authorize('create', Asset::class);
-            $asset = $assets->create(auth()->user(), $data, $fieldValues);
+            $asset = $assets->create(auth()->user(), $data, $singleValues, $groupData);
             session()->flash('status', 'Utworzono zasób.');
         }
 
         return $this->redirectRoute('assets.show', $asset, navigate: true);
+    }
+
+    /** @return array<int,mixed> Wartości pól pojedynczych ograniczone do struktury kategorii. */
+    protected function collectSingleValues(): array
+    {
+        $single = [];
+        foreach ($this->singleFields() as $field) {
+            if (array_key_exists($field->id, $this->values)) {
+                $single[$field->id] = $this->values[$field->id];
+            }
+        }
+
+        return $single;
+    }
+
+    /**
+     * @return array<int,array<int,array{id:int|null,values:array<int,mixed>}>>
+     *         Dane grup ograniczone do aktywnych grup i ich aktywnych pól.
+     */
+    protected function collectGroupData(): array
+    {
+        $groupData = [];
+
+        foreach ($this->repeatableGroups() as $group) {
+            $rows = array_values($this->groups[$group->id] ?? []);
+            $clean = [];
+
+            foreach ($rows as $row) {
+                $values = [];
+                foreach ($group->activeFields as $field) {
+                    if (isset($row['values']) && array_key_exists($field->id, $row['values'])) {
+                        $values[$field->id] = $row['values'][$field->id];
+                    }
+                }
+
+                $clean[] = [
+                    'id' => isset($row['id']) && $row['id'] !== null ? (int) $row['id'] : null,
+                    'values' => $values,
+                ];
+            }
+
+            $groupData[$group->id] = $clean;
+        }
+
+        return $groupData;
     }
 
     public function render()
@@ -255,8 +488,24 @@ class ManageForm extends Component
                     ->when($this->asset, fn ($q) => $q->whereKeyNot($this->asset->id))
                     ->orderBy('name')->get()
                 : collect(),
-            'fields' => $this->renderableFields(),
-            'hasSkippedFields' => $this->categoryFields()->count() > $this->renderableFields()->count(),
+            'tree' => $this->tree(),
+            'looseFields' => $this->looseSingleFields(),
+            'hasSkippedFields' => $this->hasSkippedFields(),
         ]);
+    }
+
+    /** Czy kategoria zawiera pola typu file/relation pominięte w tym widoku. */
+    protected function hasSkippedFields(): bool
+    {
+        $category = $this->category();
+        if (! $category) {
+            return false;
+        }
+
+        return AssetField::query()
+            ->where('asset_category_id', $category->id)
+            ->where('is_active', true)
+            ->whereIn('type', array_map(fn ($t) => $t->value, AssetStructure::SKIPPED_TYPES))
+            ->exists();
     }
 }
