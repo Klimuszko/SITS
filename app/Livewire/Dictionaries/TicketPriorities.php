@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Dictionaries;
 
+use App\Enums\AuditAction;
 use App\Models\TicketPriority;
+use App\Services\AuditLogger;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -81,6 +83,51 @@ class TicketPriorities extends Component
         session()->flash('status', 'Priorytet został dezaktywowany.');
     }
 
+    /** Reaktywacja priorytetu (is_active=true). Admin (manage-categories). */
+    public function reactivate(int $id): void
+    {
+        $this->authorize('manage-categories');
+
+        TicketPriority::whereKey($id)->update(['is_active' => true]);
+
+        session()->flash('status', 'Priorytet został reaktywowany.');
+    }
+
+    /**
+     * TRWAŁE usunięcie priorytetu — wyłącznie Super Admin (gate force-delete,
+     * sprawdzany serwerowo). Tabela bez SoftDeletes. REFERENCE-SAFE: jeśli
+     * jakiekolwiek zgłoszenia używają tego priorytetu (FK tickets.ticket_priority_id),
+     * blokujemy z komunikatem zamiast pozwolić bazie rzucić wyjątkiem. Bez zgłoszeń
+     * robimy twarde delete(). Operacja nieodwracalna. Audyt przed delete.
+     */
+    public function forceDelete(int $id): void
+    {
+        $this->authorize('force-delete');
+
+        $priority = TicketPriority::find($id);
+
+        if ($priority === null) {
+            return;
+        }
+
+        $ticketCount = $priority->tickets()->count();
+
+        if ($ticketCount > 0) {
+            session()->flash('error', "Nie można trwale usunąć — priorytet jest w użyciu ({$ticketCount} zgłoszeń). Zmień priorytet w tych zgłoszeniach najpierw.");
+
+            return;
+        }
+
+        AuditLogger::log(AuditAction::TicketPriorityDeleted, $priority);
+        $priority->delete();
+
+        if ($this->editingId === $id) {
+            $this->resetForm();
+        }
+
+        session()->flash('status', 'Priorytet został trwale usunięty.');
+    }
+
     public function resetForm(): void
     {
         $this->reset(['editingId', 'name', 'level', 'color', 'is_active']);
@@ -90,8 +137,10 @@ class TicketPriorities extends Component
     public function render()
     {
         return view('livewire.dictionaries.ticket-priorities', [
+            // Pokazujemy też nieaktywne — z przyciskiem Reaktywuj, by nic nie zostało osierocone.
             'priorities' => TicketPriority::orderBy('level')->orderBy('name')->get(),
             'colors' => self::COLORS,
+            'canForceDelete' => auth()->user()?->isSuperAdmin() ?? false,
         ]);
     }
 }

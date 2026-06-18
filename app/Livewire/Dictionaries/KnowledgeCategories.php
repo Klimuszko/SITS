@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Dictionaries;
 
+use App\Enums\AuditAction;
 use App\Models\KnowledgeCategory;
+use App\Services\AuditLogger;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -98,6 +100,51 @@ class KnowledgeCategories extends Component
         session()->flash('status', 'Kategoria bazy wiedzy została usunięta.');
     }
 
+    /** Reaktywacja (un-trash) miękko usuniętej kategorii. Admin (manage-categories). */
+    public function reactivate(int $id): void
+    {
+        $this->authorize('manage-categories');
+
+        KnowledgeCategory::withTrashed()->findOrFail($id)->restore();
+
+        session()->flash('status', 'Kategoria bazy wiedzy została reaktywowana.');
+    }
+
+    /**
+     * TRWAŁE usunięcie kategorii — wyłącznie Super Admin (gate force-delete,
+     * sprawdzany serwerowo). REFERENCE-SAFE: jeśli jakiekolwiek artykuły są
+     * przypisane do tej kategorii (FK knowledge_articles.knowledge_category_id),
+     * blokujemy z komunikatem zamiast pozwolić bazie rzucić wyjątkiem. Bez
+     * artykułów robimy forceDelete(). Operacja nieodwracalna. Audyt przed delete.
+     */
+    public function forceDelete(int $id): void
+    {
+        $this->authorize('force-delete');
+
+        $category = KnowledgeCategory::withTrashed()->find($id);
+
+        if ($category === null) {
+            return;
+        }
+
+        $articleCount = $category->articles()->count();
+
+        if ($articleCount > 0) {
+            session()->flash('error', "Nie można trwale usunąć — kategoria jest w użyciu ({$articleCount} artykułów). Odepnij artykuły od tej kategorii najpierw.");
+
+            return;
+        }
+
+        AuditLogger::log(AuditAction::KnowledgeCategoryDeleted, $category);
+        $category->forceDelete();
+
+        if ($this->editingId === $id) {
+            $this->resetForm();
+        }
+
+        session()->flash('status', 'Kategoria bazy wiedzy została trwale usunięta.');
+    }
+
     public function resetForm(): void
     {
         $this->reset(['editingId', 'name', 'slug', 'description', 'parent_id']);
@@ -107,11 +154,13 @@ class KnowledgeCategories extends Component
     public function render()
     {
         return view('livewire.dictionaries.knowledge-categories', [
-            'categories' => KnowledgeCategory::with('parent')->orderBy('name')->get(),
-            // Lista możliwych rodziców — bez bieżąco edytowanej kategorii.
+            // withTrashed() — pokazujemy też miękko usunięte, z przyciskiem Reaktywuj.
+            'categories' => KnowledgeCategory::withTrashed()->with('parent')->orderBy('name')->get(),
+            // Lista możliwych rodziców — tylko aktywne (nie miękko usunięte) i bez bieżąco edytowanej.
             'parents' => KnowledgeCategory::query()
                 ->when($this->editingId, fn ($q) => $q->whereKeyNot($this->editingId))
                 ->orderBy('name')->get(),
+            'canForceDelete' => auth()->user()?->isSuperAdmin() ?? false,
         ]);
     }
 }

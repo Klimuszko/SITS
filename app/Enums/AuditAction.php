@@ -34,6 +34,10 @@ enum AuditAction: string
     case AssetSectionDeleted = 'asset_section.deleted';
     case AssetFieldDeleted = 'asset_field.deleted';
 
+    case TicketCategoryDeleted = 'ticket_category.deleted';
+    case TicketPriorityDeleted = 'ticket_priority.deleted';
+    case KnowledgeCategoryDeleted = 'knowledge_category.deleted';
+
     case LocationCreated = 'location.created';
     case LocationUpdated = 'location.updated';
 

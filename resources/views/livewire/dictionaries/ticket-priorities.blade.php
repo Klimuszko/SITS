@@ -8,6 +8,13 @@
 
     @include('livewire.dictionaries._tabs')
 
+    @if (session('status'))
+        <div class="alert alert--success" style="margin-bottom:18px">{{ session('status') }}</div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert--error" style="margin-bottom:18px">{{ session('error') }}</div>
+    @endif
+
     <form wire:submit="save">
         <div class="card">
             <div class="card__body">
@@ -91,6 +98,18 @@
                                     wire:click="deactivate({{ $priority->id }})"
                                     wire:confirm="Dezaktywować ten priorytet? Powiązane zgłoszenia zostaną zachowane.">
                                 Dezaktywuj
+                            </button>
+                        @else
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                    wire:click="reactivate({{ $priority->id }})">
+                                Reaktywuj
+                            </button>
+                        @endif
+                        @if ($canForceDelete)
+                            <button type="button" class="btn btn--danger btn--sm"
+                                    wire:click="forceDelete({{ $priority->id }})"
+                                    wire:confirm="Trwale usunie ten priorytet. Dozwolone tylko, gdy żadne zgłoszenie go nie używa. Operacja jest nieodwracalna. Kontynuować?">
+                                Usuń trwale
                             </button>
                         @endif
                     </td>

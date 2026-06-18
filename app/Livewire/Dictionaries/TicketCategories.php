@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Dictionaries;
 
+use App\Enums\AuditAction;
 use App\Models\TicketCategory;
+use App\Services\AuditLogger;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -74,6 +76,51 @@ class TicketCategories extends Component
         session()->flash('status', 'Kategoria została dezaktywowana.');
     }
 
+    /** Reaktywacja kategorii (is_active=true). Admin (manage-categories). */
+    public function reactivate(int $id): void
+    {
+        $this->authorize('manage-categories');
+
+        TicketCategory::whereKey($id)->update(['is_active' => true]);
+
+        session()->flash('status', 'Kategoria została reaktywowana.');
+    }
+
+    /**
+     * TRWAŁE usunięcie kategorii — wyłącznie Super Admin (gate force-delete,
+     * sprawdzany serwerowo). REFERENCE-SAFE: jeśli jakiekolwiek zgłoszenia
+     * używają tej kategorii (FK tickets.ticket_category_id), blokujemy z
+     * komunikatem zamiast pozwolić bazie rzucić wyjątkiem. Bez zgłoszeń robimy
+     * twarde delete(). Operacja nieodwracalna. Audyt przed delete.
+     */
+    public function forceDelete(int $id): void
+    {
+        $this->authorize('force-delete');
+
+        $category = TicketCategory::find($id);
+
+        if ($category === null) {
+            return;
+        }
+
+        $ticketCount = $category->tickets()->count();
+
+        if ($ticketCount > 0) {
+            session()->flash('error', "Nie można trwale usunąć — kategoria jest w użyciu ({$ticketCount} zgłoszeń). Zmień kategorię w tych zgłoszeniach najpierw.");
+
+            return;
+        }
+
+        AuditLogger::log(AuditAction::TicketCategoryDeleted, $category);
+        $category->forceDelete();
+
+        if ($this->editingId === $id) {
+            $this->resetForm();
+        }
+
+        session()->flash('status', 'Kategoria została trwale usunięta.');
+    }
+
     public function resetForm(): void
     {
         $this->reset(['editingId', 'name', 'key', 'is_active']);
@@ -83,7 +130,9 @@ class TicketCategories extends Component
     public function render()
     {
         return view('livewire.dictionaries.ticket-categories', [
+            // Pokazujemy też nieaktywne — z przyciskiem Reaktywuj, by nic nie zostało osierocone.
             'categories' => TicketCategory::orderBy('name')->get(),
+            'canForceDelete' => auth()->user()?->isSuperAdmin() ?? false,
         ]);
     }
 }

@@ -8,6 +8,13 @@
 
     @include('livewire.dictionaries._tabs')
 
+    @if (session('status'))
+        <div class="alert alert--success" style="margin-bottom:18px">{{ session('status') }}</div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert--error" style="margin-bottom:18px">{{ session('error') }}</div>
+    @endif
+
     <form wire:submit="save">
         <div class="card">
             <div class="card__body">
@@ -61,6 +68,7 @@
                     <th>Nazwa</th>
                     <th>Slug</th>
                     <th>Nadrzędna</th>
+                    <th>Status</th>
                     <th></th>
                 </tr>
             </thead>
@@ -70,17 +78,38 @@
                     <td><strong>{{ $category->name }}</strong></td>
                     <td class="muted">{{ $category->slug }}</td>
                     <td class="muted">{{ $category->parent?->name ?? '—' }}</td>
+                    <td>
+                        @if ($category->trashed())
+                            <span class="badge badge--gray">Usunięta</span>
+                        @else
+                            <span class="badge badge--green">Aktywna</span>
+                        @endif
+                    </td>
                     <td style="text-align:right">
-                        <button type="button" class="btn btn--ghost btn--sm" wire:click="edit({{ $category->id }})">Edytuj</button>
-                        <button type="button" class="btn btn--ghost btn--sm"
-                                wire:click="delete({{ $category->id }})"
-                                wire:confirm="Usunąć tę kategorię? Artykuły zostaną zachowane (bez kategorii).">
-                            Usuń
-                        </button>
+                        @if ($category->trashed())
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                    wire:click="reactivate({{ $category->id }})">
+                                Reaktywuj
+                            </button>
+                        @else
+                            <button type="button" class="btn btn--ghost btn--sm" wire:click="edit({{ $category->id }})">Edytuj</button>
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                    wire:click="delete({{ $category->id }})"
+                                    wire:confirm="Usunąć tę kategorię? Artykuły zostaną zachowane (bez kategorii).">
+                                Usuń
+                            </button>
+                        @endif
+                        @if ($canForceDelete)
+                            <button type="button" class="btn btn--danger btn--sm"
+                                    wire:click="forceDelete({{ $category->id }})"
+                                    wire:confirm="Trwale usunie tę kategorię bazy wiedzy. Dozwolone tylko, gdy żaden artykuł jej nie używa. Operacja jest nieodwracalna. Kontynuować?">
+                                Usuń trwale
+                            </button>
+                        @endif
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="4" class="table__empty">Brak kategorii bazy wiedzy.</td></tr>
+                <tr><td colspan="5" class="table__empty">Brak kategorii bazy wiedzy.</td></tr>
             @endforelse
             </tbody>
         </table>
