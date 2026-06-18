@@ -138,6 +138,41 @@ class AssetDynamicFormTest extends TestCase
         $this->assertCount(1, $component->get('groups')[$section->id]);
     }
 
+    public function test_row_numbering_resets_after_removing_all_rows(): void
+    {
+        // Numeracja wierszy zależy od bieżącej listy, nie od historycznego licznika:
+        // po dodaniu 4 i usunięciu wszystkich, kolejny wiersz musi być znów „#1" (nie „#5").
+        [$support, $organization, $category] = $this->staffOrgCategory();
+        [$section] = $this->group($category);
+        $this->actingAs($support);
+
+        $component = Livewire::test(ManageForm::class)
+            ->set('organization_id', $organization->id)
+            ->set('asset_category_id', $category->id);
+
+        // Dodaj 4 wiersze (#1–#4).
+        $component->call('addRow', $section->id)
+            ->call('addRow', $section->id)
+            ->call('addRow', $section->id)
+            ->call('addRow', $section->id);
+        $this->assertCount(4, $component->get('groups')[$section->id]);
+        $component->assertSee('VM #4');
+
+        // Usuń wszystkie — zawsze indeks 0 (tablica reindeksuje się po każdym usunięciu).
+        $component->call('removeRow', $section->id, 0)
+            ->call('removeRow', $section->id, 0)
+            ->call('removeRow', $section->id, 0)
+            ->call('removeRow', $section->id, 0);
+        $this->assertCount(0, $component->get('groups')[$section->id]);
+
+        // Kolejny wiersz musi być „#1", nie „#5".
+        $component->call('addRow', $section->id);
+        $this->assertCount(1, $component->get('groups')[$section->id]);
+        $component->assertSee('VM #1');
+        $component->assertDontSee('VM #5');
+        $component->assertDontSee('VM #2');
+    }
+
     public function test_required_single_field_blank_fails_validation(): void
     {
         [$support, $organization, $category] = $this->staffOrgCategory();

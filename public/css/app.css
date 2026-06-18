@@ -176,3 +176,109 @@ a:hover { text-decoration: underline; }
 .stack { display: flex; flex-direction: column; gap: 10px; }
 .list-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .list-row:last-child { border-bottom: none; }
+
+/* --------------------- Treść artykułu bazy wiedzy --------------------- */
+/* Typografia dla sanityzowanego HTML renderowanego w .article-body.
+   Wszystkie reguły scope'owane pod .article-body, by nie wpływać na resztę UI. */
+.article-body { color: var(--text); font-size: 15px; line-height: 1.65; }
+.article-body > :first-child { margin-top: 0; }
+.article-body > :last-child { margin-bottom: 0; }
+
+.article-body h1, .article-body h2, .article-body h3,
+.article-body h4, .article-body h5, .article-body h6 {
+    margin: 1.4em 0 .5em; line-height: 1.3; font-weight: 700; color: var(--text);
+}
+.article-body h1 { font-size: 1.7em; }
+.article-body h2 { font-size: 1.45em; border-bottom: 1px solid var(--border); padding-bottom: .25em; }
+.article-body h3 { font-size: 1.25em; }
+.article-body h4 { font-size: 1.1em; }
+.article-body h5 { font-size: 1em; }
+.article-body h6 { font-size: .9em; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+
+.article-body p { margin: 0 0 1em; }
+.article-body ul, .article-body ol { margin: 0 0 1em; padding-left: 1.6em; }
+.article-body li { margin: .25em 0; }
+.article-body li > ul, .article-body li > ol { margin: .25em 0; }
+.article-body ul { list-style: disc; }
+.article-body ol { list-style: decimal; }
+
+.article-body a { color: var(--primary); text-decoration: none; }
+.article-body a:hover { color: var(--primary-dark); text-decoration: underline; }
+
+.article-body strong, .article-body b { font-weight: 700; }
+.article-body em, .article-body i { font-style: italic; }
+.article-body mark { background: var(--c-amber-bg); color: var(--c-amber); padding: 0 .15em; border-radius: 3px; }
+.article-body small { font-size: .85em; color: var(--text-muted); }
+.article-body abbr[title] { text-decoration: underline dotted; cursor: help; }
+.article-body kbd {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .85em; padding: 1px 6px; border: 1px solid var(--border);
+    border-bottom-width: 2px; border-radius: 5px; background: var(--surface-2); color: var(--text);
+}
+
+.article-body blockquote {
+    margin: 0 0 1em; padding: .4em 1em; border-left: 4px solid var(--border);
+    color: var(--text-muted); background: var(--surface-2); border-radius: 0 6px 6px 0;
+}
+.article-body blockquote > :last-child { margin-bottom: 0; }
+
+/* Kod inline + bloki kodu. */
+.article-body code, .article-body kbd, .article-body samp, .article-body var {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+.article-body code {
+    font-size: .88em; background: var(--surface-2); border: 1px solid var(--border);
+    padding: .1em .4em; border-radius: 5px; color: var(--c-slate);
+}
+.article-body var { font-style: italic; }
+.article-body pre {
+    margin: 0 0 1em; padding: 14px 16px; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto;
+    line-height: 1.5;
+}
+.article-body pre code {
+    background: none; border: 0; padding: 0; font-size: .88em; color: var(--text);
+}
+
+/* Tabele — ramki i nagłówek spójne z .table aplikacji. */
+.article-body table {
+    border-collapse: collapse; width: 100%; margin: 0 0 1em;
+    border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.article-body th, .article-body td {
+    padding: 10px 14px; border: 1px solid var(--border); text-align: left; vertical-align: top;
+}
+.article-body th { background: var(--surface-2); font-weight: 700; }
+.article-body caption { caption-side: bottom; padding: 8px 0; color: var(--text-muted); font-size: 13px; }
+
+/* Obrazki, separatory, figury, listy definicji. */
+.article-body img { max-width: 100%; height: auto; border-radius: 6px; }
+.article-body hr { border: 0; border-top: 1px solid var(--border); margin: 1.5em 0; }
+.article-body figure { margin: 0 0 1em; }
+.article-body figure img { display: block; }
+.article-body figcaption { margin-top: .5em; color: var(--text-muted); font-size: 13px; text-align: center; }
+.article-body dl { margin: 0 0 1em; }
+.article-body dt { font-weight: 700; margin-top: .6em; }
+.article-body dd { margin: 0 0 .4em 1.2em; color: var(--text); }
+
+/* Utility z whitelisty klas (poza globalnym .muted). */
+.article-body .text-center { text-align: center; }
+.article-body .text-right { text-align: right; }
+
+/* Bloki notatek / ostrzeżeń (klasy z allowed_classes). */
+.article-body .note, .article-body .info, .article-body .tip,
+.article-body .success, .article-body .warning,
+.article-body .danger, .article-body .error, .article-body .kb-callout {
+    margin: 0 0 1em; padding: 12px 16px; border: 1px solid var(--border);
+    border-left-width: 4px; border-radius: 8px; background: var(--surface-2);
+}
+.article-body .note > :last-child, .article-body .info > :last-child,
+.article-body .tip > :last-child, .article-body .success > :last-child,
+.article-body .warning > :last-child, .article-body .danger > :last-child,
+.article-body .error > :last-child, .article-body .kb-callout > :last-child { margin-bottom: 0; }
+
+.article-body .note, .article-body .kb-callout { border-left-color: var(--c-gray); background: var(--c-gray-bg); color: var(--c-slate); }
+.article-body .info { border-left-color: var(--c-blue); background: var(--c-blue-bg); color: var(--c-blue); }
+.article-body .tip, .article-body .success { border-left-color: var(--c-green); background: var(--c-green-bg); color: var(--c-green); }
+.article-body .warning { border-left-color: var(--c-amber); background: var(--c-amber-bg); color: var(--c-amber); }
+.article-body .danger, .article-body .error { border-left-color: var(--c-red); background: var(--c-red-bg); color: var(--c-red); }
