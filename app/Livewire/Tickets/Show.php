@@ -231,7 +231,7 @@ class Show extends Component
     public function render()
     {
         $user = auth()->user();
-        $this->ticket->load(['organization', 'requester', 'location', 'asset', 'assignedSupport', 'priority', 'category', 'observers', 'attachments.uploader']);
+        $this->ticket->load(['organization', 'requester', 'location', 'asset', 'assignedSupport', 'priority', 'category', 'observers', 'attachments.uploader', 'assetGroupEntry.asset', 'assetGroupEntry.values', 'assetGroupEntry.section.displayField']);
 
         $comments = $this->ticket->comments()->with('author')->get();
         if (! $this->isStaff()) {

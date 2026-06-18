@@ -50,6 +50,7 @@ class TicketService
                         'organization_id' => $organization->id,
                         'location_id' => $data['location_id'] ?? null,
                         'asset_id' => $data['asset_id'] ?? null,
+                        'asset_group_entry_id' => $data['asset_group_entry_id'] ?? null,
                         'assigned_support_id' => $primarySupportId,
                         // Nowy ticket jest zawsze "Nowy"; auto-przypisanie supporta nie
                         // zmienia statusu (status "Przypisany" został usunięty w Kroku 11).

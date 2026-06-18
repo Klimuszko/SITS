@@ -24,6 +24,7 @@ class Ticket extends Model
         'organization_id',
         'location_id',
         'asset_id',
+        'asset_group_entry_id',
         'assigned_support_id',
         'status',
         'ticket_priority_id',
@@ -65,6 +66,12 @@ class Ticket extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class);
+    }
+
+    /** Pod-zasób (wpis grupy powtarzalnej), z którym powiązano zgłoszenie. */
+    public function assetGroupEntry(): BelongsTo
+    {
+        return $this->belongsTo(AssetGroupEntry::class);
     }
 
     public function assignedSupport(): BelongsTo

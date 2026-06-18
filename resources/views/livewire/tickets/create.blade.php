@@ -55,13 +55,17 @@
                     </div>
 
                     <div class="field">
-                        <label for="asset_id">Powiązany zasób</label>
-                        <select id="asset_id" class="select" wire:model="asset_id" @disabled(!$organization_id)>
+                        <label for="assetSelection">Powiązany zasób</label>
+                        <select id="assetSelection" class="select" wire:model="assetSelection" @disabled(!$organization_id)>
                             <option value="">— brak —</option>
-                            @foreach ($assets as $asset)
-                                <option value="{{ $asset->id }}">{{ $asset->name }}</option>
+                            @foreach ($assetGroups as $group)
+                                <option value="{{ $group['value'] }}">{{ $group['label'] }}</option>
+                                @foreach ($group['subs'] as $sub)
+                                    <option value="{{ $sub['value'] }}">{{ $sub['label'] }}</option>
+                                @endforeach
                             @endforeach
                         </select>
+                        @error('assetSelection') <span class="error">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="field">
