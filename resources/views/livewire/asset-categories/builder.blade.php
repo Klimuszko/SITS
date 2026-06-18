@@ -136,7 +136,7 @@
 
             <div style="margin-top:18px">
                 @forelse ($sectionTree as $node)
-                    @include('livewire.asset-categories._node', ['node' => $node, 'depth' => 0])
+                    @include('livewire.asset-categories._node', ['node' => $node, 'depth' => 0, 'canForceDelete' => $canForceDelete])
                 @empty
                     <p class="muted">Brak węzłów. Dodaj pierwszą sekcję powyżej.</p>
                 @endforelse
@@ -271,6 +271,18 @@
                                         wire:click="deactivateField({{ $field->id }})"
                                         wire:confirm="Dezaktywować to pole? Dotychczasowe wartości w zasobach zostaną zachowane.">
                                     Dezaktywuj
+                                </button>
+                            @else
+                                <button type="button" class="btn btn--ghost btn--sm"
+                                        wire:click="reactivateField({{ $field->id }})">
+                                    Reaktywuj
+                                </button>
+                            @endif
+                            @if ($canForceDelete)
+                                <button type="button" class="btn btn--danger btn--sm"
+                                        wire:click="forceDeleteField({{ $field->id }})"
+                                        wire:confirm="Trwale usunie pole i WSZYSTKIE jego zapisane wartości we wszystkich zasobach. Operacja jest nieodwracalna. Kontynuować?">
+                                    Usuń trwale
                                 </button>
                             @endif
                         </td>

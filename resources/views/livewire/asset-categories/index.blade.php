@@ -8,6 +8,13 @@
 
     @include('livewire.dictionaries._tabs')
 
+    @if (session('status'))
+        <div class="alert alert--success" style="margin-bottom:18px">{{ session('status') }}</div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert--error" style="margin-bottom:18px">{{ session('error') }}</div>
+    @endif
+
     <form wire:submit="save">
         <div class="card">
             <div class="card__body">
@@ -92,6 +99,18 @@
                                     wire:click="deactivate({{ $category->id }})"
                                     wire:confirm="Dezaktywować tę kategorię? Powiązane zasoby i pola zostaną zachowane.">
                                 Dezaktywuj
+                            </button>
+                        @else
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                    wire:click="reactivate({{ $category->id }})">
+                                Reaktywuj
+                            </button>
+                        @endif
+                        @if ($canForceDelete)
+                            <button type="button" class="btn btn--danger btn--sm"
+                                    wire:click="forceDelete({{ $category->id }})"
+                                    wire:confirm="Trwale usunie tę kategorię WRAZ z jej sekcjami, polami i wszystkimi zapisanymi wartościami. Dozwolone tylko, gdy kategoria nie ma żadnych zasobów. Operacja jest nieodwracalna. Kontynuować?">
+                                Usuń trwale
                             </button>
                         @endif
                     </td>

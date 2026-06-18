@@ -33,6 +33,18 @@
                         wire:confirm="Dezaktywować ten węzeł?">
                     Dezaktywuj
                 </button>
+            @else
+                <button type="button" class="btn btn--ghost btn--sm"
+                        wire:click="reactivateSection({{ $node->id }})">
+                    Reaktywuj
+                </button>
+            @endif
+            @if ($canForceDelete)
+                <button type="button" class="btn btn--danger btn--sm"
+                        wire:click="forceDeleteSection({{ $node->id }})"
+                        wire:confirm="Trwale usunie ten węzeł WRAZ z jego pod-sekcjami, polami i wszystkimi ich zapisanymi wartościami w zasobach. Operacja jest nieodwracalna. Kontynuować?">
+                    Usuń trwale
+                </button>
             @endif
         </div>
     </div>
@@ -45,6 +57,6 @@
     @endif
 
     @foreach ($node->childNodes as $child)
-        @include('livewire.asset-categories._node', ['node' => $child, 'depth' => $depth + 1])
+        @include('livewire.asset-categories._node', ['node' => $child, 'depth' => $depth + 1, 'canForceDelete' => $canForceDelete])
     @endforeach
 </div>

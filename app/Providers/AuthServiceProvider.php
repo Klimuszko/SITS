@@ -49,6 +49,8 @@ class AuthServiceProvider extends ServiceProvider
         // Bramki administracyjne.
         Gate::define('access-admin', fn (User $user) => $user->isAdminLevel());
         Gate::define('manage-system', fn (User $user) => $user->isSuperAdmin());
+        // Trwałe (twarde) usuwanie definicji — wyłącznie Super Admin.
+        Gate::define('force-delete', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-users', fn (User $user) => $user->isAdminLevel());
         Gate::define('manage-categories', fn (User $user) => $user->isAdminLevel());
         Gate::define('view-audit', fn (User $user) => $user->isAdminLevel());

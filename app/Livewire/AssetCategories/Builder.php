@@ -3,9 +3,11 @@
 namespace App\Livewire\AssetCategories;
 
 use App\Enums\AssetFieldType;
+use App\Enums\AuditAction;
 use App\Models\AssetCategory;
 use App\Models\AssetField;
 use App\Models\AssetSection;
+use App\Services\AuditLogger;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -250,6 +252,63 @@ class Builder extends Component
         session()->flash('status', 'Węzeł został dezaktywowany.');
     }
 
+    /** Reaktywacja węzła (is_active=true). Admin (manage-categories). */
+    public function reactivateSection(int $id): void
+    {
+        $this->authorize('manage-categories');
+
+        $this->assetCategory->sections()->whereKey($id)->update(['is_active' => true]);
+
+        session()->flash('status', 'Węzeł został reaktywowany.');
+    }
+
+    /**
+     * TRWAŁE usunięcie węzła — wyłącznie Super Admin (gate force-delete,
+     * sprawdzany serwerowo, nie tylko w UI). Najpierw rekurencyjnie kasujemy
+     * węzły potomne i ich pola (asset_section_id ma nullOnDelete → bez tego
+     * pola zostałyby osierocone), dopiero potem sam węzeł. Wartości pól
+     * znikają kaskadowo (asset_field_values / asset_group_entry_values),
+     * a wpisy grup kaskadowo po asset_section_id. Operacja nieodwracalna.
+     */
+    public function forceDeleteSection(int $id): void
+    {
+        $this->authorize('force-delete');
+
+        $section = $this->assetCategory->sections()->find($id);
+
+        if ($section === null) {
+            return;
+        }
+
+        $this->deleteSectionTree($section);
+
+        if ($this->editingSectionId === $id) {
+            $this->resetSectionForm();
+        }
+
+        session()->flash('status', 'Węzeł i jego podelementy zostały trwale usunięte.');
+    }
+
+    /**
+     * Rekurencyjnie usuwa węzeł: najpierw potomne węzły (głębia), potem pola
+     * tego węzła, na końcu sam węzeł. Każde usunięcie jest audytowane PRZED
+     * skasowaniem wiersza (subject_id przepada po delete).
+     */
+    protected function deleteSectionTree(AssetSection $section): void
+    {
+        foreach ($section->children()->get() as $child) {
+            $this->deleteSectionTree($child);
+        }
+
+        foreach ($section->fields()->get() as $field) {
+            AuditLogger::log(AuditAction::AssetFieldDeleted, $field);
+            $field->delete();
+        }
+
+        AuditLogger::log(AuditAction::AssetSectionDeleted, $section);
+        $section->delete();
+    }
+
     public function resetSectionForm(): void
     {
         $this->reset([
@@ -442,6 +501,42 @@ class Builder extends Component
         session()->flash('status', 'Pole zostało dezaktywowane.');
     }
 
+    /** Reaktywacja pola (is_active=true). Admin (manage-categories). */
+    public function reactivateField(int $id): void
+    {
+        $this->authorize('manage-categories');
+
+        $this->assetCategory->fields()->whereKey($id)->update(['is_active' => true]);
+
+        session()->flash('status', 'Pole zostało reaktywowane.');
+    }
+
+    /**
+     * TRWAŁE usunięcie pola — wyłącznie Super Admin (gate force-delete,
+     * sprawdzany serwerowo). Twardy delete kaskadowo usuwa WSZYSTKIE zapisane
+     * wartości tego pola: asset_field_values + asset_group_entry_values
+     * (oba mają cascadeOnDelete). Operacja nieodwracalna. Audyt przed delete.
+     */
+    public function forceDeleteField(int $id): void
+    {
+        $this->authorize('force-delete');
+
+        $field = $this->assetCategory->fields()->find($id);
+
+        if ($field === null) {
+            return;
+        }
+
+        AuditLogger::log(AuditAction::AssetFieldDeleted, $field);
+        $field->delete();
+
+        if ($this->editingFieldId === $id) {
+            $this->resetFieldForm();
+        }
+
+        session()->flash('status', 'Pole zostało trwale usunięte.');
+    }
+
     public function resetFieldForm(): void
     {
         $this->reset([
@@ -517,6 +612,7 @@ class Builder extends Component
             'kindSection' => self::KIND_SECTION,
             'kindSubsection' => self::KIND_SUBSECTION,
             'kindGroup' => self::KIND_GROUP,
+            'canForceDelete' => auth()->user()?->isSuperAdmin() ?? false,
         ]);
     }
 }

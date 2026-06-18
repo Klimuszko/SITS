@@ -30,6 +30,10 @@ enum AuditAction: string
     case AssetUpdated = 'asset.updated';
     case AssetArchived = 'asset.archived';
 
+    case AssetCategoryDeleted = 'asset_category.deleted';
+    case AssetSectionDeleted = 'asset_section.deleted';
+    case AssetFieldDeleted = 'asset_field.deleted';
+
     case LocationCreated = 'location.created';
     case LocationUpdated = 'location.updated';
 
