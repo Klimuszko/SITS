@@ -50,22 +50,17 @@ class HtmlSanitizerTest extends TestCase
     public function test_newly_allowed_tags_and_classes_survive(): void
     {
         $clean = $this->clean(
-            '<figure><img src="https://example.com/a.png" alt="rys">'
-            .'<figcaption>Podpis</figcaption></figure>'
-            .'<dl><dt>Termin</dt><dd>Definicja</dd></dl>'
-            .'<p>Naciśnij <kbd>Ctrl</kbd> i <mark>zaznacz</mark> <abbr title="np.">tekst</abbr>.</p>'
+            '<dl><dt>Termin</dt><dd>Definicja</dd></dl>'
+            .'<p>Naciśnij <kbd>Ctrl</kbd> i <abbr title="np.">tekst</abbr>.</p>'
             .'<p class="text-center">środek</p>'
             .'<table style="width:100%"><colgroup><col span="2"></colgroup>'
             .'<tr><td style="vertical-align:top">x</td></tr></table>'
         );
 
-        $this->assertStringContainsString('<figure>', $clean);
-        $this->assertStringContainsString('<figcaption>', $clean);
         $this->assertStringContainsString('<dl>', $clean);
         $this->assertStringContainsString('<dt>', $clean);
         $this->assertStringContainsString('<dd>', $clean);
         $this->assertStringContainsString('<kbd>', $clean);
-        $this->assertStringContainsString('<mark>', $clean);
         $this->assertStringContainsString('title="np."', $clean);
         $this->assertStringContainsString('class="text-center"', $clean);
         $this->assertStringContainsString('<col', $clean);

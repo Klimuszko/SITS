@@ -25,8 +25,9 @@ return [
         // Nagłówki + akapity blokowe (z ograniczonym inline style).
         'h1[style],h2[style],h3[style],h4[style],h5[style],h6[style],'.
         'p[style],br,hr,blockquote[style],'.
-        // Formatowanie inline.
-        'strong,b,em,i,u,s,sub,sup,mark,small,del,ins,kbd,samp,var,abbr[title],'.
+        // Formatowanie inline (tylko elementy obsługiwane natywnie przez HTMLPurifier;
+        // HTML5 jak <mark> NIE jest wspierany bez własnej definicji — pominięty).
+        'strong,b,em,i,u,s,sub,sup,small,del,ins,kbd,samp,var,abbr[title],'.
         // Listy + listy definicji.
         'ul,ol,li,dl,dt,dd,'.
         // Linki (target/rel kontrolowane przez TargetBlank) + obrazki (bez style — bez url()).
@@ -36,8 +37,9 @@ return [
         'table[style],thead,tbody,tfoot,tr,'.
         'colgroup,col[span],'.
         'th[colspan|rowspan|scope|style],td[colspan|rowspan|style],caption,'.
-        // Bloki kodu, figury z podpisem, kontenery z klasą/inline style.
-        'pre,code,figure[style],figcaption,'.
+        // Bloki kodu, kontenery z klasą/inline style.
+        // (figure/figcaption to HTML5 — nieobsługiwane przez HTMLPurifier bez własnej definicji.)
+        'pre,code,'.
         'span[class|style],div[class|style]',
 
     // Właściwości CSS dozwolone w atrybucie inline `style=`.
