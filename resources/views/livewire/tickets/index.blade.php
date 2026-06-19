@@ -1,13 +1,11 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Zgłoszenia</h1>
-            <p>Lista zgłoszeń w zakresie Twoich uprawnień.</p>
-        </div>
+    <x-page-header title="Zgłoszenia" description="Lista zgłoszeń w zakresie Twoich uprawnień.">
         @if ($canCreate)
-            <a href="{{ route('tickets.create') }}" wire:navigate class="btn btn--primary">+ Nowe zgłoszenie</a>
+            <x-slot:actions>
+                <a href="{{ route('tickets.create') }}" wire:navigate class="btn btn--primary">+ Nowe zgłoszenie</a>
+            </x-slot:actions>
         @endif
-    </div>
+    </x-page-header>
 
     <div class="toolbar">
         <input type="search" class="input" placeholder="Szukaj po numerze lub tytule…" wire:model.live.debounce.300ms="search">
@@ -25,6 +23,7 @@
     </div>
 
     <div class="card">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -57,6 +56,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
 
         @if ($tickets->hasPages())
             {{ $tickets->links() }}

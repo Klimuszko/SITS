@@ -1,5 +1,7 @@
 <div class="auth-card">
-    <div class="auth-logo">Serwis<span style="color:var(--text)">IT</span></div>
+    <div class="auth-logo">
+        <img src="{{ asset('img/logo-wordmark.png') }}" alt="Smart Solutions — Portal IT">
+    </div>
     <h1>Logowanie</h1>
     <p class="muted" style="margin-top:0">Zaloguj się do portalu obsługi IT.</p>
 
