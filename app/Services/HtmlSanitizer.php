@@ -42,7 +42,7 @@ class HtmlSanitizer
         $doc = new DOMDocument('1.0', 'UTF-8');
 
         // <meta charset> wymusza UTF-8 w trybie HTML (NIEZAWODNIE na PHP 8.3 / libxml —
-        // prefiks "<?xml encoding?>" bywa ignorowany i prowadzi do podwójnego kodowania
+        // deklaracja kodowania w stylu XML bywa ignorowana i prowadzi do podwójnego kodowania
         // polskich znaków). Własny <body> czyni parsowanie odpornym na pofragmentowane wejście;
         // serializujemy DZIECI body, więc ewentualny scalony <body onload> nie trafia na wyjście.
         $previous = libxml_use_internal_errors(true);
