@@ -59,12 +59,8 @@
                 </svg>
             </button>
 
-            @php
-                $brandingMode = \App\Models\Setting::get('branding_mode', 'name');
-                $logoUrl = \App\Models\Setting::get('logo_path')
-                    ? route('branding.logo').'?v='.\App\Models\Setting::get('branding_version')
-                    : null;
-            @endphp
+            @php ($brandingMode = \App\Models\Setting::get('branding_mode', 'name'))
+            @php ($logoUrl = \App\Models\Setting::get('logo_path') ? route('branding.logo').'?v='.\App\Models\Setting::get('branding_version') : null)
             <a href="{{ route('dashboard') }}" wire:navigate class="brand" aria-label="Smart Solutions — Portal IT">
                 @if ($brandingMode === 'logo' && $logoUrl)
                     <img class="brand__logo brand__logo--solo" src="{{ $logoUrl }}" alt="Logo">
