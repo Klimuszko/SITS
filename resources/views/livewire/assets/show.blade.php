@@ -111,6 +111,17 @@
                 </div>
             @endif
 
+            @if ($canForceDelete)
+                <div class="card">
+                    <div class="card__head">Strefa niebezpieczna</div>
+                    <div class="card__body stack" style="gap:10px">
+                        <button type="button" class="btn btn--danger btn--sm" wire:click="forceDelete"
+                            wire:confirm="Trwale usunie ten zasób WRAZ z wartościami pól, wpisami grup, relacjami, przypisaniami, historią i załącznikami. Powiązane zgłoszenia stracą link do zasobu (zostaną zachowane). Operacja jest nieodwracalna. Kontynuować?"
+                            wire:loading.attr="disabled" wire:target="forceDelete">Usuń trwale</button>
+                    </div>
+                </div>
+            @endif
+
             <div class="card">
                 <div class="card__head">Status</div>
                 <div class="card__body stack" style="gap:8px;font-size:14px">

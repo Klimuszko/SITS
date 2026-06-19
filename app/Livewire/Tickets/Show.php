@@ -205,6 +205,36 @@ class Show extends Component
         $this->ticket->refresh();
     }
 
+    /* ----------------------------- Trwałe usunięcie -------------------------- */
+
+    /**
+     * TRWAŁE usunięcie zgłoszenia — wyłącznie Super Admin (gate force-delete,
+     * sprawdzany serwerowo; przycisk w widoku to tylko wygoda). Audyt PRZED delete
+     * (wiersz audytu przeżywa). Pliki załączników (polimorfizm BEZ kaskady FK)
+     * usuwamy jawnie z dysku i kasujemy wiersze. Ticket ma SoftDeletes → forceDelete()
+     * dla prawdziwego, nieodwracalnego usunięcia. Kaskada bazy usuwa komentarze
+     * i piny obserwatorów. Operacja nieodwracalna.
+     */
+    public function forceDelete()
+    {
+        $this->authorize('force-delete');
+
+        AuditLogger::log(AuditAction::TicketDeleted, $this->ticket);
+
+        foreach ($this->ticket->attachments as $attachment) {
+            if (Storage::disk('local')->exists($attachment->path)) {
+                Storage::disk('local')->delete($attachment->path);
+            }
+            $attachment->forceDelete();
+        }
+
+        $this->ticket->forceDelete();
+
+        session()->flash('status', 'Zgłoszenie zostało trwale usunięte.');
+
+        return $this->redirectRoute('tickets.index', navigate: true);
+    }
+
     /* -------------------------------- Pomocnicze ----------------------------- */
 
     protected function touchReply(bool $staffReply): void
@@ -247,6 +277,7 @@ class Show extends Component
             'canInternal' => $user->can('addInternalNote', $this->ticket),
             'canRequestClose' => $user->can('requestClose', $this->ticket),
             'isStaff' => $this->isStaff(),
+            'canForceDelete' => $user->isSuperAdmin(),
         ]);
     }
 }

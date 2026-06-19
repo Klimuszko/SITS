@@ -25,10 +25,12 @@ enum AuditAction: string
     case TicketCommented = 'ticket.commented';
     case TicketInternalNote = 'ticket.internal_note';
     case TicketCloseRequested = 'ticket.close_requested';
+    case TicketDeleted = 'ticket.deleted';
 
     case AssetCreated = 'asset.created';
     case AssetUpdated = 'asset.updated';
     case AssetArchived = 'asset.archived';
+    case AssetDeleted = 'asset.deleted';
 
     case AssetCategoryDeleted = 'asset_category.deleted';
     case AssetSectionDeleted = 'asset_section.deleted';

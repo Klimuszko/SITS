@@ -156,6 +156,17 @@
                 </div>
             @endif
 
+            @if ($canForceDelete)
+                <div class="card">
+                    <div class="card__head">Strefa niebezpieczna</div>
+                    <div class="card__body stack" style="gap:10px">
+                        <button type="button" class="btn btn--danger btn--sm" wire:click="forceDelete"
+                            wire:confirm="Trwale usunie to zgłoszenie WRAZ z komentarzami, obserwatorami i załącznikami. Operacja jest nieodwracalna. Kontynuować?"
+                            wire:loading.attr="disabled" wire:target="forceDelete">Usuń trwale</button>
+                    </div>
+                </div>
+            @endif
+
             {{-- Obserwatorzy --}}
             <div class="card">
                 <div class="card__head">Obserwatorzy ({{ $ticket->observers->count() }})</div>

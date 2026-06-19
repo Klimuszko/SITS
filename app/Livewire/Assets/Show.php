@@ -3,12 +3,15 @@
 namespace App\Livewire\Assets;
 
 use App\Enums\AssetFieldType;
+use App\Enums\AuditAction;
 use App\Models\Asset;
 use App\Models\AssetField;
 use App\Models\AssetSection;
 use App\Services\AssetService;
 use App\Services\AssetStructure;
+use App\Services\AuditLogger;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -33,6 +36,39 @@ class Show extends Component
 
         $this->asset->refresh();
         session()->flash('status', 'Zasób został zarchiwizowany.');
+    }
+
+    /**
+     * TRWAŁE usunięcie zasobu — wyłącznie Super Admin (gate force-delete,
+     * sprawdzany serwerowo; przycisk w widoku to tylko wygoda). Audyt PRZED delete.
+     * Pliki załączników (polimorfizm BEZ kaskady FK) usuwamy jawnie z dysku i
+     * kasujemy wiersze. Asset ma SoftDeletes → forceDelete() dla prawdziwego,
+     * nieodwracalnego usunięcia. Kaskada bazy usuwa wartości pól, wpisy grup wraz
+     * z ich wartościami, relacje, przypisania i historię.
+     *
+     * REFERENCE-SAFE (zgłoszenia przychodzące): FK tickets.asset_id oraz
+     * tickets.asset_group_entry_id są nullOnDelete — usunięcie zasobu zeruje
+     * powiązania w zgłoszeniach (zgłoszenia przeżywają, tracą tylko link do zasobu),
+     * baza nie rzuca wyjątkiem. Operacja nieodwracalna.
+     */
+    public function forceDelete()
+    {
+        $this->authorize('force-delete');
+
+        AuditLogger::log(AuditAction::AssetDeleted, $this->asset);
+
+        foreach ($this->asset->attachments as $attachment) {
+            if (Storage::disk('local')->exists($attachment->path)) {
+                Storage::disk('local')->delete($attachment->path);
+            }
+            $attachment->forceDelete();
+        }
+
+        $this->asset->forceDelete();
+
+        session()->flash('status', 'Zasób został trwale usunięty.');
+
+        return $this->redirectRoute('assets.index', navigate: true);
     }
 
     protected function structure(): AssetStructure
@@ -168,6 +204,7 @@ class Show extends Component
             'history' => $this->asset->history()->with('user')->get(),
             'canUpdate' => $user->can('update', $this->asset),
             'canArchive' => $user->can('archive', $this->asset),
+            'canForceDelete' => $user->isSuperAdmin(),
         ]);
     }
 }
