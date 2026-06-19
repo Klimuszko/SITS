@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Livewire\Settings\Branding;
 use App\Models\Setting;
 use App\Support\SvgSanitizer;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -31,30 +30,17 @@ class BrandingSettingsTest extends TestCase
         $this->assertSame('light', Setting::get('default_theme'));
     }
 
-    public function test_non_admin_cannot_access_branding_component(): void
+    public function test_non_admin_cannot_access_branding(): void
     {
-        Storage::fake('local');
         $this->actingAs(\App\Models\User::factory()->create());
 
-        // Robust wobec Livewire 3: mount() autoryzuje, więc rzuca przy odmowie.
-        try {
-            Livewire::test(Branding::class)
-                ->set('brandingMode', 'logo')
-                ->call('save');
-        } catch (AuthorizationException) {
-            // oczekiwane — zwykły użytkownik nie ma access-admin
-        }
+        // Odmowa na poziomie mount() (gate access-admin) → 403 na trasie. To właściwy
+        // sposób testu mount-autoryzacji; Livewire::test() nie rzuca tu czysto wyjątku
+        // (przerywa render → "Invalid snapshot" przy ->set()).
+        $this->get(route('settings.branding'))->assertForbidden();
 
         // Nic się nie zmieniło (żaden wiersz settings nie powstał).
-        $this->assertNull(Setting::get('branding_mode'));
         $this->assertDatabaseCount('settings', 0);
-    }
-
-    public function test_non_admin_route_is_forbidden(): void
-    {
-        $this->actingAs(\App\Models\User::factory()->create());
-
-        $this->get(route('settings.branding'))->assertForbidden();
     }
 
     public function test_upload_rejects_disallowed_type(): void
