@@ -23,6 +23,22 @@
             document.documentElement.setAttribute('data-theme', next);
             try { localStorage.setItem('theme', next); } catch (e) {}
         }
+
+        // Zwinięcie sidebaru (desktop) trzymane w localStorage — ten sam wzorzec co motyw:
+        // applySidebar() na pierwszy paint ORAZ po nawigacji Livewire (serwerowy HTML nie
+        // niesie data-sidebar). Zwinięcie to tryb tylko-ikony; mobile ma własny drawer (CSS).
+        function applySidebar() {
+            var s;
+            try { s = localStorage.getItem('sidebar') || 'expanded'; } catch (e) { s = 'expanded'; }
+            document.documentElement.setAttribute('data-sidebar', s);
+        }
+        applySidebar();
+        document.addEventListener('livewire:navigated', applySidebar);
+        function toggleSidebar() {
+            var next = document.documentElement.getAttribute('data-sidebar') === 'collapsed' ? 'expanded' : 'collapsed';
+            document.documentElement.setAttribute('data-sidebar', next);
+            try { localStorage.setItem('sidebar', next); } catch (e) {}
+        }
     </script>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
     @livewireStyles
@@ -75,80 +91,35 @@
         <div class="sidebar__backdrop" x-show="nav" x-transition.opacity @click="nav = false" style="display:none"></div>
 
         <nav id="sidebar" class="sidebar" :class="{ 'is-open': nav }" aria-label="Nawigacja główna">
-            {{-- Pulpit --}}
-            <div class="sidebar__group">
-                <a href="{{ route('dashboard') }}" wire:navigate @click="nav = false"
-                   class="sidebar__link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                   @if(request()->routeIs('dashboard')) aria-current="page" @endif>Pulpit</a>
+            {{-- Nawigacja z pojedynczego źródła prawdy: \App\Support\Navigation.
+                 Bramki widoczności rozstrzygane są tam; tu jest czyste renderowanie. --}}
+            <div class="sidebar__nav">
+                @foreach (\App\Support\Navigation::categoriesFor($user) as $category)
+                    <div class="sidebar__group">
+                        @if ($category['label'])
+                            <div class="sidebar__label">
+                                @if ($category['icon'])
+                                    <x-icon :name="$category['icon']" class="sidebar__label-icon" />
+                                @endif
+                                <span class="sidebar__text">{{ $category['label'] }}</span>
+                            </div>
+                        @endif
+                        @foreach ($category['items'] as $item)
+                            @php($isActive = request()->routeIs($item['active']))
+                            <a href="{{ route($item['route']) }}" wire:navigate @click="nav = false"
+                               class="sidebar__link {{ $isActive ? 'active' : '' }}"
+                               title="{{ $item['label'] }}" aria-label="{{ $item['label'] }}"
+                               @if($isActive) aria-current="page" @endif><x-icon :name="$item['icon']" /><span class="sidebar__text">{{ $item['label'] }}</span></a>
+                        @endforeach
+                    </div>
+                @endforeach
             </div>
 
-            {{-- Wsparcie --}}
-            <div class="sidebar__group">
-                <div class="sidebar__label">Wsparcie</div>
-                <a href="{{ route('tickets.index') }}" wire:navigate @click="nav = false"
-                   class="sidebar__link {{ request()->routeIs('tickets.*') ? 'active' : '' }}"
-                   @if(request()->routeIs('tickets.*')) aria-current="page" @endif>Zgłoszenia</a>
-                <a href="{{ route('knowledge.index') }}" wire:navigate @click="nav = false"
-                   class="sidebar__link {{ request()->routeIs('knowledge.*') ? 'active' : '' }}"
-                   @if(request()->routeIs('knowledge.*')) aria-current="page" @endif>Baza wiedzy</a>
-            </div>
-
-            {{-- Zasoby --}}
-            <div class="sidebar__group">
-                <div class="sidebar__label">Zasoby</div>
-                <a href="{{ route('assets.index') }}" wire:navigate @click="nav = false"
-                   class="sidebar__link {{ request()->routeIs('assets.*') ? 'active' : '' }}"
-                   @if(request()->routeIs('assets.*')) aria-current="page" @endif>Zasoby</a>
-                @if ($user->isStaff())
-                    <a href="{{ route('locations.index') }}" wire:navigate @click="nav = false"
-                       class="sidebar__link {{ request()->routeIs('locations.*') ? 'active' : '' }}"
-                       @if(request()->routeIs('locations.*')) aria-current="page" @endif>Lokalizacje</a>
-                @endif
-            </div>
-
-            {{-- Klienci --}}
-            @if ($user->isStaff() || $user->can('manage-users'))
-                <div class="sidebar__group">
-                    <div class="sidebar__label">Klienci</div>
-                    @if ($user->isStaff())
-                        <a href="{{ route('organizations.index') }}" wire:navigate @click="nav = false"
-                           class="sidebar__link {{ request()->routeIs('organizations.*') ? 'active' : '' }}"
-                           @if(request()->routeIs('organizations.*')) aria-current="page" @endif>Organizacje</a>
-                    @endif
-                    @can('manage-users')
-                        <a href="{{ route('users.index') }}" wire:navigate @click="nav = false"
-                           class="sidebar__link {{ request()->routeIs('users.*') ? 'active' : '' }}"
-                           @if(request()->routeIs('users.*')) aria-current="page" @endif>Użytkownicy</a>
-                    @endcan
-                </div>
-            @endif
-
-            {{-- Praca --}}
-            @if ($user->isStaff() || $user->managesAnyOrganization())
-                <div class="sidebar__group">
-                    <div class="sidebar__label">Praca</div>
-                    <a href="{{ route('work-logs.index') }}" wire:navigate @click="nav = false"
-                       class="sidebar__link {{ request()->routeIs('work-logs.*') ? 'active' : '' }}"
-                       @if(request()->routeIs('work-logs.*')) aria-current="page" @endif>Prace administracyjne</a>
-                </div>
-            @endif
-
-            {{-- Administracja --}}
-            @if ($user->can('manage-categories') || $user->can('view-audit'))
-                <div class="sidebar__group">
-                    <div class="sidebar__label">Administracja</div>
-                    @can('manage-categories')
-                        <a href="{{ route('dictionaries.ticket-categories') }}" wire:navigate @click="nav = false"
-                           class="sidebar__link {{ request()->routeIs('dictionaries.*') ? 'active' : '' }}"
-                           @if(request()->routeIs('dictionaries.*')) aria-current="page" @endif>Słowniki</a>
-                    @endcan
-                    @can('view-audit')
-                        <a href="{{ route('audit.index') }}" wire:navigate @click="nav = false"
-                           class="sidebar__link {{ request()->routeIs('audit.*') ? 'active' : '' }}"
-                           @if(request()->routeIs('audit.*')) aria-current="page" @endif>Audyt</a>
-                    @endcan
-                </div>
-            @endif
+            {{-- Zwijanie sidebaru — desktop only (CSS chowa go na mobile, gdzie działa drawer). --}}
+            <button type="button" class="sidebar__collapse" onclick="toggleSidebar()" aria-label="Zwiń lub rozwiń menu" title="Zwiń lub rozwiń menu">
+                <x-icon name="chevron-left" class="sidebar__collapse-icon" />
+                <span class="sidebar__text">Zwiń menu</span>
+            </button>
         </nav>
 
         <main id="content" class="content" tabindex="-1">

@@ -105,7 +105,7 @@ a:hover { text-decoration: underline; }
 
 /* Dostępność: spójny, widoczny pierścień focusu dla klawiatury (bez wpływu na klik myszą).
    :where() => zerowa specyficzność, nie nadpisuje stylów komponentów. */
-:where(a, button, .btn, .btn-link, summary, [tabindex], .sidebar__link):focus-visible {
+:where(a, button, .btn, .btn-link, summary, [tabindex], .sidebar__link, .sidebar__collapse):focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
@@ -188,23 +188,48 @@ a:hover { text-decoration: underline; }
     width: var(--sidebar-w); flex: none;
     position: sticky; top: var(--topbar-h);
     height: calc(100vh - var(--topbar-h));
-    overflow-y: auto;
+    overflow-y: auto; overflow-x: hidden;
     background: var(--surface); border-right: 1px solid var(--border);
-    padding: 16px 12px; display: flex; flex-direction: column; gap: 18px;
+    padding: 16px 12px; display: flex; flex-direction: column;
+    transition: width .18s ease;
 }
+.sidebar__nav { display: flex; flex-direction: column; gap: 6px; }
+
 .sidebar__group { display: flex; flex-direction: column; gap: 2px; }
+/* Wizualne oddzielenie grup: hairline + odstęp nad nagłówkiem (poza pierwszą). */
+.sidebar__group + .sidebar__group { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border); }
+
 .sidebar__label {
-    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-    color: var(--text-muted); padding: 4px 12px 6px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--text-muted); padding: 2px 12px 6px;
 }
+.sidebar__label-icon { width: 14px; height: 14px; flex: none; opacity: .7; }
+
 .sidebar__link {
     display: flex; align-items: center; gap: 10px;
     padding: 9px 12px; min-height: 40px; border-radius: var(--radius-sm);
     color: var(--text-muted); font-weight: 600; font-size: 14px; text-decoration: none;
+    white-space: nowrap; overflow: hidden;
     transition: background-color .15s ease, color .15s ease;
 }
+/* Ikona pozycji: stały slot, więc pozycje bez ikony nie tworzą postrzępionego wcięcia. */
+.sidebar__link .icon { width: 18px; height: 18px; flex: none; }
 .sidebar__link:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
 .sidebar__link.active { background: var(--primary-soft); color: var(--primary-dark); box-shadow: inset 3px 0 0 0 var(--accent-green); }
+
+/* Przycisk zwijania — przyklejony do dołu sidebaru. */
+.sidebar__collapse {
+    margin-top: auto; margin-bottom: 2px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; min-height: 40px; width: 100%;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text-muted);
+    font-weight: 600; font-size: 13px; cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+}
+.sidebar__collapse:hover { background: var(--surface-2); color: var(--text); }
+.sidebar__collapse-icon { width: 18px; height: 18px; flex: none; transition: transform .18s ease; }
 
 .sidebar__backdrop { display: none; }
 
@@ -213,15 +238,33 @@ a:hover { text-decoration: underline; }
     margin: 0 auto; padding: 28px 28px 56px;
 }
 
-/* Mobile: sidebar jako wysuwany drawer. */
+/* ----- Zwinięty sidebar (tylko desktop; reguły mobilne są w @media niżej) ----- */
+html[data-sidebar="collapsed"] .sidebar { width: 64px; padding-left: 8px; padding-right: 8px; }
+html[data-sidebar="collapsed"] .sidebar__text { display: none; }
+html[data-sidebar="collapsed"] .sidebar__label { justify-content: center; padding: 2px 0 4px; }
+html[data-sidebar="collapsed"] .sidebar__label-icon { opacity: .9; }
+html[data-sidebar="collapsed"] .sidebar__link { justify-content: center; gap: 0; padding: 9px 0; }
+html[data-sidebar="collapsed"] .sidebar__collapse { justify-content: center; gap: 0; padding: 9px 0; }
+html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180deg); }
+
+/* Mobile: sidebar jako wysuwany drawer. Zwinięcie NIE obowiązuje — drawer
+   zawsze pełnej szerokości, niezależnie od data-sidebar. */
 @media (max-width: 1024px) {
     .topbar__hamburger { display: inline-flex; }
-    .sidebar {
-        position: fixed; top: 0; left: 0; height: 100vh; z-index: 60;
+    .sidebar,
+    html[data-sidebar="collapsed"] .sidebar {
+        position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh; z-index: 60;
         transform: translateX(-100%); transition: transform .22s ease;
-        box-shadow: var(--shadow-lg); padding-top: 16px;
+        box-shadow: var(--shadow-lg); padding: 16px 12px;
     }
-    .sidebar.is-open { transform: translateX(0); }
+    .sidebar.is-open,
+    html[data-sidebar="collapsed"] .sidebar.is-open { transform: translateX(0); }
+    /* Na mobile drawer zawsze pokazuje pełne etykiety i przywraca układ pozycji. */
+    html[data-sidebar="collapsed"] .sidebar__text { display: inline; }
+    html[data-sidebar="collapsed"] .sidebar__label { justify-content: flex-start; padding: 2px 12px 6px; }
+    html[data-sidebar="collapsed"] .sidebar__link { justify-content: flex-start; gap: 10px; padding: 9px 12px; }
+    html[data-sidebar="collapsed"] .sidebar__collapse { justify-content: center; gap: 10px; padding: 9px 12px; }
+    html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: none; }
     .sidebar__backdrop {
         display: block; position: fixed; inset: 0; z-index: 50;
         background: rgba(14, 34, 51, .42);

@@ -20,12 +20,13 @@ class NavVisibilityTest extends TestCase
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
-        // Asercje na dokładnym znaczniku linku nav (>Etykieta</a>), żeby nie łapać
+        // Asercje na dokładnym znaczniku etykiety nav (>Etykieta</span> — etykieta
+        // pozycji jest owinięta w <span class="sidebar__text">), żeby nie łapać
         // ewentualnego tekstu treści pulpitu.
         $response->assertOk();
-        $response->assertDontSee('>Organizacje</a>', false);
-        $response->assertDontSee('>Lokalizacje</a>', false);
-        $response->assertDontSee('>Prace administracyjne</a>', false);
+        $response->assertDontSee('>Organizacje</span>', false);
+        $response->assertDontSee('>Lokalizacje</span>', false);
+        $response->assertDontSee('>Prace administracyjne</span>', false);
     }
 
     public function test_manager_sees_prace_adm_but_not_organizacje_or_lokalizacje(): void
@@ -43,9 +44,9 @@ class NavVisibilityTest extends TestCase
         $response = $this->actingAs($manager)->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertSee('>Prace administracyjne</a>', false);
-        $response->assertDontSee('>Organizacje</a>', false);
-        $response->assertDontSee('>Lokalizacje</a>', false);
+        $response->assertSee('>Prace administracyjne</span>', false);
+        $response->assertDontSee('>Organizacje</span>', false);
+        $response->assertDontSee('>Lokalizacje</span>', false);
     }
 
     public function test_support_sees_all_three_tabs(): void
@@ -55,8 +56,8 @@ class NavVisibilityTest extends TestCase
         $response = $this->actingAs($support)->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertSee('>Organizacje</a>', false);
-        $response->assertSee('>Lokalizacje</a>', false);
-        $response->assertSee('>Prace administracyjne</a>', false);
+        $response->assertSee('>Organizacje</span>', false);
+        $response->assertSee('>Lokalizacje</span>', false);
+        $response->assertSee('>Prace administracyjne</span>', false);
     }
 }
