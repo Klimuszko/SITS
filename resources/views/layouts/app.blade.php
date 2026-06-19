@@ -7,10 +7,17 @@
     <title>{{ $title ?? config('app.name', 'Smart Solutions') }}</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <script>
-        (function () {
-            try { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark'); }
-            catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
-        })();
+        // Motyw trzymany w localStorage (domyślnie ciemny). applyTheme() wołane od razu
+        // (pierwszy paint -> brak FOUC) ORAZ po każdej nawigacji Livewire SPA: wire:navigate
+        // podmienia stronę na serwerowy HTML BEZ data-theme, więc bez tego nasłuchu motyw
+        // resetował się do jasnego po kliknięciu w link.
+        function applyTheme() {
+            var t;
+            try { t = localStorage.getItem('theme') || 'dark'; } catch (e) { t = 'dark'; }
+            document.documentElement.setAttribute('data-theme', t);
+        }
+        applyTheme();
+        document.addEventListener('livewire:navigated', applyTheme);
         function toggleTheme() {
             var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
