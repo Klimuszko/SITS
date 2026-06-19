@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\HomeController;
 use App\Livewire\AssetCategories\Builder as AssetCategoryBuilder;
 use App\Livewire\AssetCategories\Index as AssetCategoryIndex;
@@ -22,6 +23,7 @@ use App\Livewire\Locations\ManageForm as LocationForm;
 use App\Livewire\Organizations\Index as OrganizationIndex;
 use App\Livewire\Organizations\ManageForm as OrganizationForm;
 use App\Livewire\Profile\Edit as ProfileEdit;
+use App\Livewire\Settings\Branding as SettingsBranding;
 use App\Livewire\Tickets\Create as TicketCreate;
 use App\Livewire\Tickets\Index as TicketIndex;
 use App\Livewire\Tickets\Show as TicketShow;
@@ -41,6 +43,15 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', LogoutController::class)->name('logout')->middleware('auth');
+
+/* ------------------------------- Branding ------------------------------- */
+
+// Publiczne (CELOWO BEZ auth): logo pokazuje się na stronie logowania, a favicon
+// pobiera przeglądarka bez sesji. Pliki z dysku prywatnego, serwowane przez kontroler
+// z poprawnym Content-Type + X-Content-Type-Options: nosniff. SVG jest sanityzowany
+// przy zapisie. Brak pliku → 404 (layouty mają fallback).
+Route::get('/branding/logo', [BrandingController::class, 'logo'])->name('branding.logo');
+Route::get('/branding/favicon', [BrandingController::class, 'favicon'])->name('branding.favicon');
 
 /* ------------------------------ Aplikacja ------------------------------- */
 
@@ -121,4 +132,7 @@ Route::middleware('auth')->group(function () {
 
     // Audyt (tylko do odczytu, admin). Autoryzacja w mount() przez bramkę view-audit.
     Route::get('/audyt', AuditIndex::class)->name('audit.index');
+
+    // Ustawienia brandingu (admin). Autoryzacja w mount() przez bramkę access-admin.
+    Route::get('/ustawienia/branding', SettingsBranding::class)->name('settings.branding');
 });

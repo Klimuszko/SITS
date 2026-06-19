@@ -5,15 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? config('app.name', 'Smart Solutions') }}</title>
-    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" href="{{ \App\Models\Setting::get('favicon_path') ? route('branding.favicon').'?v='.\App\Models\Setting::get('branding_version') : asset('favicon.ico') }}" sizes="any">
     <script>
-        // Motyw trzymany w localStorage (domyślnie ciemny). applyTheme() wołane od razu
-        // (pierwszy paint -> brak FOUC) ORAZ po każdej nawigacji Livewire SPA: wire:navigate
-        // podmienia stronę na serwerowy HTML BEZ data-theme, więc bez tego nasłuchu motyw
-        // resetował się do jasnego po kliknięciu w link.
+        // Motyw trzymany w localStorage. Domyślny motyw aplikacji jest konfigurowalny
+        // przez admina (Setting::default_theme); jawny wybór użytkownika w localStorage
+        // ZAWSZE ma pierwszeństwo. applyTheme() wołane od razu (pierwszy paint -> brak FOUC)
+        // ORAZ po każdej nawigacji Livewire SPA: wire:navigate podmienia stronę na serwerowy
+        // HTML BEZ data-theme, więc bez tego nasłuchu motyw resetował się po kliknięciu w link.
         function applyTheme() {
+            var d = @js(\App\Models\Setting::get('default_theme', 'dark'));
             var t;
-            try { t = localStorage.getItem('theme') || 'dark'; } catch (e) { t = 'dark'; }
+            try { t = localStorage.getItem('theme') || d; } catch (e) { t = d; }
             document.documentElement.setAttribute('data-theme', t);
         }
         applyTheme();
@@ -57,8 +59,21 @@
                 </svg>
             </button>
 
+            @php
+                $brandingMode = \App\Models\Setting::get('branding_mode', 'name');
+                $logoUrl = \App\Models\Setting::get('logo_path')
+                    ? route('branding.logo').'?v='.\App\Models\Setting::get('branding_version')
+                    : null;
+            @endphp
             <a href="{{ route('dashboard') }}" wire:navigate class="brand" aria-label="Smart Solutions — Portal IT">
-                <span class="brand__mark">Smart</span><span class="brand__accent">Solutions</span>
+                @if ($brandingMode === 'logo' && $logoUrl)
+                    <img class="brand__logo brand__logo--solo" src="{{ $logoUrl }}" alt="Logo">
+                @else
+                    <span class="brand__mark">Smart</span><span class="brand__accent">Solutions</span>
+                    @if ($brandingMode === 'name_logo' && $logoUrl)
+                        <img class="brand__logo" src="{{ $logoUrl }}" alt="Logo">
+                    @endif
+                @endif
             </a>
 
             <div class="topbar__spacer"></div>

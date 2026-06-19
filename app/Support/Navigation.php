@@ -73,6 +73,7 @@ final class Navigation
                 'items' => [
                     ['label' => 'Słowniki', 'route' => 'dictionaries.ticket-categories', 'active' => 'dictionaries.*', 'icon' => 'sliders', 'visible' => $user->can('manage-categories')],
                     ['label' => 'Audyt', 'route' => 'audit.index', 'active' => 'audit.*', 'icon' => 'shield', 'visible' => $user->can('view-audit')],
+                    ['label' => 'Ustawienia', 'route' => 'settings.branding', 'active' => 'settings.*', 'icon' => 'settings', 'visible' => $user->can('access-admin')],
                 ],
             ],
         ];

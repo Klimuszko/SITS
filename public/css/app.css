@@ -153,13 +153,16 @@ a:hover { text-decoration: underline; }
 .topbar__hamburger svg { width: 20px; height: 20px; }
 
 .brand {
-    display: inline-flex; align-items: baseline; gap: 6px;
+    display: inline-flex; align-items: center; gap: 6px;
     font-weight: 800; font-size: 19px; letter-spacing: -.01em; white-space: nowrap;
 }
 .brand__mark { color: var(--text); }
 .brand__accent {
     background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
+/* Logo brandingu w pasku górnym — nie może przekroczyć wysokości topbaru (60px). */
+.brand__logo { height: 28px; width: auto; display: block; }
+.brand__logo--solo { height: 32px; }
 .topbar__spacer { flex: 1; }
 
 .topbar__theme {

@@ -119,6 +119,6 @@ class NavigationTest extends TestCase
         );
 
         $this->assertSame(['Organizacje', 'Użytkownicy'], $this->labelsIn($categories, 'klienci'));
-        $this->assertSame(['Słowniki', 'Audyt'], $this->labelsIn($categories, 'administracja'));
+        $this->assertSame(['Słowniki', 'Audyt', 'Ustawienia'], $this->labelsIn($categories, 'administracja'));
     }
 }
