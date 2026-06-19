@@ -25,7 +25,7 @@ class NavVisibilityTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('>Organizacje</a>', false);
         $response->assertDontSee('>Lokalizacje</a>', false);
-        $response->assertDontSee('>Prace adm.</a>', false);
+        $response->assertDontSee('>Prace administracyjne</a>', false);
     }
 
     public function test_manager_sees_prace_adm_but_not_organizacje_or_lokalizacje(): void
@@ -43,7 +43,7 @@ class NavVisibilityTest extends TestCase
         $response = $this->actingAs($manager)->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertSee('>Prace adm.</a>', false);
+        $response->assertSee('>Prace administracyjne</a>', false);
         $response->assertDontSee('>Organizacje</a>', false);
         $response->assertDontSee('>Lokalizacje</a>', false);
     }
@@ -57,6 +57,6 @@ class NavVisibilityTest extends TestCase
         $response->assertOk();
         $response->assertSee('>Organizacje</a>', false);
         $response->assertSee('>Lokalizacje</a>', false);
-        $response->assertSee('>Prace adm.</a>', false);
+        $response->assertSee('>Prace administracyjne</a>', false);
     }
 }
