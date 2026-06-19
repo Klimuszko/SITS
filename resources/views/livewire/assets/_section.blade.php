@@ -28,7 +28,7 @@
                     <tbody>
                         @foreach ($node['group']['rows'] as $i => $row)
                             <tr>
-                                <td class="muted">{{ $row['label'] }}</td>
+                                <td class="muted">#{{ $i + 1 }}</td>
                                 @foreach ($node['group']['columns'] as $col)
                                     <td>{{ $row['cells'][$col->id] ?? '—' }}</td>
                                 @endforeach

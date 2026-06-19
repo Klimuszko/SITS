@@ -292,6 +292,44 @@ class AssetDynamicFormTest extends TestCase
         $this->assertSame('10.0.0.7', $rows[0]['values'][$ipField->id]);
     }
 
+    public function test_show_numbers_group_rows_by_position_not_entry_id(): void
+    {
+        // Widok szczegółów liczy „#" po POZYCJI w bieżącej liście, nie po id wpisu:
+        // po usunięciu wcześniejszych dysków kolejne zaczynają od #1 (na zdjęciu było #9/#10/#11 = id).
+        [$support, $organization, $category] = $this->staffOrgCategory();
+
+        // Grupa BEZ pola wyświetlanej nazwy → displayLabel() spadłoby do #id (jak dyski).
+        $section = AssetSection::factory()->forCategory($category)->repeatable()->create([
+            'name' => 'Dysk Twardy', 'ticket_label' => 'Dysk',
+        ]);
+        $fs = AssetField::factory()->forCategory($category)->create([
+            'asset_section_id' => $section->id, 'key' => 'fs', 'name' => 'System plikow', 'type' => AssetFieldType::Text,
+        ]);
+        $this->actingAs($support);
+
+        // Asset-wabik zajmuje pierwsze id wpisów grupy (1–3), by docelowe miały id 4 i 5.
+        app(AssetService::class)->create($support, [
+            'organization_id' => $organization->id, 'asset_category_id' => $category->id, 'name' => 'Wabik',
+        ], [], [$section->id => [
+            ['id' => null, 'values' => [$fs->id => 'aaa']],
+            ['id' => null, 'values' => [$fs->id => 'bbb']],
+            ['id' => null, 'values' => [$fs->id => 'ccc']],
+        ]]);
+
+        $asset = app(AssetService::class)->create($support, [
+            'organization_id' => $organization->id, 'asset_category_id' => $category->id, 'name' => 'Docelowy',
+        ], [], [$section->id => [
+            ['id' => null, 'values' => [$fs->id => 'ext3']],
+            ['id' => null, 'values' => [$fs->id => 'ntfs']],
+        ]]);
+
+        Livewire::test(\App\Livewire\Assets\Show::class, ['asset' => $asset])
+            ->assertSee('#1')     // pozycja 1 (z fixem); bez fixu byłoby #4
+            ->assertSee('#2')     // pozycja 2 (z fixem); bez fixu byłoby #5
+            ->assertDontSee('#4') // id wpisu — nie wolno numerować po id
+            ->assertDontSee('#5');
+    }
+
     public function test_non_staff_user_is_forbidden(): void
     {
         // Zwykły użytkownik nie ma prawa create → mount authorize('create') → 403.

@@ -129,7 +129,7 @@ class Show extends Component
     {
         $columns = $group->activeFields;
 
-        $rows = $entries->sortBy('order')->values()->map(function ($entry) use ($group, $columns) {
+        $rows = $entries->sortBy('order')->values()->map(function ($entry) use ($columns) {
             $valuesByField = $entry->values->keyBy('asset_field_id');
 
             $cells = [];
@@ -137,12 +137,9 @@ class Show extends Component
                 $cells[$field->id] = $this->castForDisplay($field, $valuesByField->get($field->id)?->value);
             }
 
-            $entry->setRelation('section', $group);
-
-            return [
-                'label' => $entry->displayLabel(),
-                'cells' => $cells,
-            ];
+            // Kolumna „#" liczona po POZYCJI w bieżącej liście (w bladzie: $i+1), NIE po id wpisu —
+            // dzięki temu po usunięciu wszystkich i dodaniu nowych numeracja zaczyna się od #1.
+            return ['cells' => $cells];
         });
 
         return ['columns' => $columns, 'rows' => $rows];
