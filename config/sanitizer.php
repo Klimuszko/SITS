@@ -22,21 +22,23 @@ return [
     'cache_path' => storage_path('app/purifier'),
 
     'allowed_html' =>
-        // Nagłówki + akapity blokowe (z ograniczonym inline style).
-        'h1[style],h2[style],h3[style],h4[style],h5[style],h6[style],'.
-        'p[style],br,hr,blockquote[style],'.
+        // Nagłówki + akapity blokowe (z ograniczonym inline style + klasą utility/callout).
+        // UWAGA: `class` musi być jawnie dozwolony na elemencie, inaczej HTMLPurifier go ścina,
+        // mimo whitelisty nazw w `allowed_classes` (ta filtruje TYLKO nazwy, nie samo prawo do atrybutu).
+        'h1[style|class],h2[style|class],h3[style|class],h4[style|class],h5[style|class],h6[style|class],'.
+        'p[style|class],br,hr,blockquote[style|class],'.
         // Formatowanie inline (tylko elementy obsługiwane natywnie przez HTMLPurifier;
         // HTML5 jak <mark> NIE jest wspierany bez własnej definicji — pominięty).
         'strong,b,em,i,u,s,sub,sup,small,del,ins,kbd,samp,var,abbr[title],'.
         // Listy + listy definicji.
-        'ul,ol,li,dl,dt,dd,'.
+        'ul[class],ol[class],li[class],dl,dt,dd,'.
         // Linki (target/rel kontrolowane przez TargetBlank) + obrazki (bez style — bez url()).
         'a[href|title|target|rel],'.
         'img[src|alt|title|width|height],'.
-        // Tabele (z grupowaniem kolumn) + inline style na komórkach/tabeli.
-        'table[style],thead,tbody,tfoot,tr,'.
+        // Tabele (z grupowaniem kolumn) + inline style/klasa na komórkach/tabeli.
+        'table[style|class],thead,tbody,tfoot,tr,'.
         'colgroup,col[span],'.
-        'th[colspan|rowspan|scope|style],td[colspan|rowspan|style],caption,'.
+        'th[colspan|rowspan|scope|style|class],td[colspan|rowspan|style|class],caption,'.
         // Bloki kodu, kontenery z klasą/inline style.
         // (figure/figcaption to HTML5 — nieobsługiwane przez HTMLPurifier bez własnej definicji.)
         'pre,code,'.
