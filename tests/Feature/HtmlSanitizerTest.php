@@ -10,7 +10,7 @@ use Tests\TestCase;
  *
  * Model "zaufany autor, blokuj aktywne": bogaty HTML/CSS prezentacyjny (flex/grid/
  * gradient/cienie/inline style) MUSI przetrwać 1:1 (parytet z GLPI), a realne wektory
- * wykonania (script/iframe/on*/javascript:/data:text/html) MUSZĄ zniknąć.
+ * wykonania (script, iframe, on-handlery, javascript:, data:text/html) MUSZĄ zniknąć.
  */
 class HtmlSanitizerTest extends TestCase
 {
