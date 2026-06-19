@@ -26,12 +26,6 @@
                     </div>
 
                     <div class="field">
-                        <label for="slug">Slug <span class="hint">— pusty = wygenerowany z nazwy</span></label>
-                        <input id="slug" class="input" wire:model="slug">
-                        @error('slug') <span class="error">{{ $message }}</span> @enderror
-                    </div>
-
-                    <div class="field">
                         <label for="parent_id">Kategoria nadrzędna</label>
                         <select id="parent_id" class="select" wire:model="parent_id">
                             <option value="">— brak (kategoria główna) —</option>
@@ -66,7 +60,6 @@
             <thead>
                 <tr>
                     <th>Nazwa</th>
-                    <th>Slug</th>
                     <th>Nadrzędna</th>
                     <th>Status</th>
                     <th></th>
@@ -76,7 +69,6 @@
             @forelse ($categories as $category)
                 <tr>
                     <td><strong>{{ $category->name }}</strong></td>
-                    <td class="muted">{{ $category->slug }}</td>
                     <td class="muted">{{ $category->parent?->name ?? '—' }}</td>
                     <td>
                         @if ($category->trashed())
@@ -109,7 +101,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="5" class="table__empty">Brak kategorii bazy wiedzy.</td></tr>
+                <tr><td colspan="4" class="table__empty">Brak kategorii bazy wiedzy.</td></tr>
             @endforelse
             </tbody>
         </table>

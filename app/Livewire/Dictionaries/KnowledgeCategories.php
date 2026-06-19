@@ -70,9 +70,11 @@ class KnowledgeCategories extends Component
     {
         $this->authorize('manage-categories');
 
-        // Slug z nazwy, jeśli pusty (przed walidacją unikalności).
+        // Slug to klucz techniczny — generowany automatycznie z nazwy i UKRYTY w UI.
+        // Na edycji zachowujemy istniejący (załadowany w edit()); na tworzeniu generujemy
+        // UNIKALNY (sufiks -2, -3, ...), więc walidacja unikalności nigdy nie wywali.
         if (blank($this->slug)) {
-            $this->slug = Str::slug($this->name);
+            $this->slug = $this->uniqueSlug(Str::slug($this->name), $this->editingId);
         }
 
         $data = $this->validate();
@@ -143,6 +145,24 @@ class KnowledgeCategories extends Component
         }
 
         session()->flash('status', 'Kategoria bazy wiedzy została trwale usunięta.');
+    }
+
+    /** Unikalny slug (sufiks -2, -3, ...), ignorując bieżąco edytowaną kategorię. */
+    protected function uniqueSlug(string $base, ?int $ignoreId): string
+    {
+        $base = $base !== '' ? $base : 'kategoria';
+        $slug = $base;
+        $i = 2;
+
+        while (KnowledgeCategory::withTrashed()
+            ->where('slug', $slug)
+            ->when($ignoreId, fn ($q) => $q->whereKeyNot($ignoreId))
+            ->exists()) {
+            $slug = $base.'-'.$i;
+            $i++;
+        }
+
+        return $slug;
     }
 
     public function resetForm(): void

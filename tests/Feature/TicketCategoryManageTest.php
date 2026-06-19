@@ -35,6 +35,18 @@ class TicketCategoryManageTest extends TestCase
         ]);
     }
 
+    public function test_key_is_auto_generated_from_name_when_not_provided(): void
+    {
+        // Klucz jest ukryty w UI — przy tworzeniu bez podania klucza generuje się z nazwy.
+        Livewire::test(TicketCategories::class)
+            ->set('name', 'Sieć i VPN')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $category = TicketCategory::where('name', 'Sieć i VPN')->firstOrFail();
+        $this->assertSame('siec-i-vpn', $category->key);
+    }
+
     public function test_admin_edits_a_ticket_category(): void
     {
         $category = TicketCategory::factory()->create(['name' => 'Stara nazwa']);

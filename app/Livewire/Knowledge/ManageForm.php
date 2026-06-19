@@ -173,6 +173,26 @@ class ManageForm extends Component
             'user_id' => $validated['newVisibilityType'] === 'user' ? $validated['newUserId'] : null,
         ];
 
+        // Blokada duplikatów: ta sama reguła (np. ten sam artykuł → ta sama organizacja)
+        // nie może być dodana dwa razy. where(kol, null) Eloquent tłumaczy na IS NULL.
+        $already = $this->article->visibilities()
+            ->where('visibility_type', $payload['visibility_type'])
+            ->where('organization_id', $payload['organization_id'])
+            ->where('role', $payload['role'])
+            ->where('user_id', $payload['user_id'])
+            ->exists();
+
+        if ($already) {
+            $field = match ($payload['visibility_type']) {
+                'organization' => 'newOrganizationId',
+                'role' => 'newRole',
+                default => 'newUserId',
+            };
+            $this->addError($field, 'Ta reguła widoczności jest już dodana.');
+
+            return;
+        }
+
         $rule = $this->article->visibilities()->create($payload);
 
         AuditLogger::log(AuditAction::ArticleVisibilityChanged, $this->article, null, $payload + ['op' => 'add']);

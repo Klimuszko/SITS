@@ -103,8 +103,10 @@ class Index extends Component
         }
 
         if ($this->search !== '') {
-            $term = '%'.$this->search.'%';
-            $query->where('title', 'like', $term);
+            // Wyszukiwanie niewrażliwe na wielkość liter. Postgres ma case-sensitive LIKE,
+            // więc LOWER(title) LIKE LOWER(?) — działa też na sqlite w testach (ILIKE by go wywaliło).
+            $term = '%'.mb_strtolower($this->search).'%';
+            $query->whereRaw('LOWER(title) LIKE ?', [$term]);
         }
 
         $articles = $query->latest('published_at')->latest()->paginate(15);

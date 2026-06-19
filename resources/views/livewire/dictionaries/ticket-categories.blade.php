@@ -25,12 +25,6 @@
                         @error('name') <span class="error">{{ $message }}</span> @enderror
                     </div>
 
-                    <div class="field">
-                        <label for="key">Klucz <span class="hint">— opcjonalny identyfikator</span></label>
-                        <input id="key" class="input" wire:model="key">
-                        @error('key') <span class="error">{{ $message }}</span> @enderror
-                    </div>
-
                     <div class="field field--full">
                         <label class="checkbox">
                             <input type="checkbox" wire:model="is_active">
@@ -57,7 +51,6 @@
             <thead>
                 <tr>
                     <th>Nazwa</th>
-                    <th>Klucz</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
@@ -66,7 +59,6 @@
             @forelse ($categories as $category)
                 <tr>
                     <td><strong>{{ $category->name }}</strong></td>
-                    <td class="muted">{{ $category->key ?? '—' }}</td>
                     <td>
                         @if ($category->is_active)
                             <span class="badge badge--green">Aktywna</span>
@@ -98,7 +90,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="4" class="table__empty">Brak kategorii zgłoszeń.</td></tr>
+                <tr><td colspan="3" class="table__empty">Brak kategorii zgłoszeń.</td></tr>
             @endforelse
             </tbody>
         </table>

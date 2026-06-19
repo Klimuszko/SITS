@@ -133,6 +133,27 @@ class KnowledgeManageFormTest extends TestCase
         ]);
     }
 
+    public function test_duplicate_organization_visibility_is_blocked(): void
+    {
+        $support = User::factory()->support()->create();
+        $org = Organization::factory()->create();
+        $article = KnowledgeArticle::factory()->authoredBy($support)->create();
+        $this->actingAs($support);
+
+        Livewire::test(ManageForm::class, ['article' => $article])
+            ->set('newVisibilityType', 'organization')
+            ->set('newOrganizationId', $org->id)
+            ->call('addVisibility')
+            ->assertHasNoErrors()
+            // Druga próba tej samej organizacji — zablokowana (błąd, brak drugiego wiersza).
+            ->set('newVisibilityType', 'organization')
+            ->set('newOrganizationId', $org->id)
+            ->call('addVisibility')
+            ->assertHasErrors('newOrganizationId');
+
+        $this->assertSame(1, $article->visibilities()->where('organization_id', $org->id)->count());
+    }
+
     public function test_visibility_role_rule_persists(): void
     {
         $support = User::factory()->support()->create();
