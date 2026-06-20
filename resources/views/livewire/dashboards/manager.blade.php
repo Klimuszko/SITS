@@ -1,10 +1,5 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Pulpit managera</h1>
-            <p>Zgłoszenia, zasoby i prace wykonane dla Twojej organizacji.</p>
-        </div>
-    </div>
+    <x-page-header title="Pulpit managera" description="Zgłoszenia, zasoby i prace wykonane dla Twojej organizacji." />
 
     <div class="grid grid--3" style="margin-bottom:22px">
         <div class="card"><div class="card__body stat">
@@ -24,7 +19,7 @@
     <div class="grid grid--2">
         <div class="card">
             <div class="card__head">Ostatnie zgłoszenia</div>
-            <table class="table">
+            <div class="table-wrap"><table class="table">
                 <thead><tr><th>Numer</th><th>Tytuł</th><th>Status</th></tr></thead>
                 <tbody>
                 @forelse ($recentTickets as $ticket)
@@ -37,12 +32,12 @@
                     <tr><td colspan="3" class="table__empty">Brak zgłoszeń.</td></tr>
                 @endforelse
                 </tbody>
-            </table>
+            </table></div>
         </div>
 
         <div class="card">
             <div class="card__head">Ostatnie prace administracyjne</div>
-            <table class="table">
+            <div class="table-wrap"><table class="table">
                 <thead><tr><th>Tytuł</th><th>Zasób</th><th>Data</th></tr></thead>
                 <tbody>
                 @forelse ($recentWorkLogs as $log)
@@ -55,7 +50,7 @@
                     <tr><td colspan="3" class="table__empty">Brak prac do wyświetlenia.</td></tr>
                 @endforelse
                 </tbody>
-            </table>
+            </table></div>
         </div>
     </div>
 </div>

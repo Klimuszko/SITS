@@ -1,11 +1,9 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Pulpit administratora</h1>
-            <p>Przegląd systemu i skróty administracyjne.</p>
-        </div>
-        <a href="{{ route('organizations.create') }}" wire:navigate class="btn btn--primary">+ Nowa organizacja</a>
-    </div>
+    <x-page-header title="Pulpit administratora" description="Przegląd systemu i skróty administracyjne.">
+        <x-slot:actions>
+            <a href="{{ route('organizations.create') }}" wire:navigate class="btn btn--primary">+ Nowa organizacja</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <div class="grid grid--4" style="margin-bottom:22px">
         <div class="card"><div class="card__body stat">
@@ -29,7 +27,7 @@
     <div class="grid grid--2">
         <div class="card">
             <div class="card__head">Ostatnie tickety</div>
-            <table class="table">
+            <div class="table-wrap"><table class="table">
                 <thead><tr><th>Numer</th><th>Tytuł</th><th>Organizacja</th><th>Status</th></tr></thead>
                 <tbody>
                 @forelse ($recentTickets as $ticket)
@@ -43,12 +41,12 @@
                     <tr><td colspan="4" class="table__empty">Brak ticketów.</td></tr>
                 @endforelse
                 </tbody>
-            </table>
+            </table></div>
         </div>
 
         <div class="card">
             <div class="card__head">Ostatnie prace administracyjne</div>
-            <table class="table">
+            <div class="table-wrap"><table class="table">
                 <thead><tr><th>Tytuł</th><th>Organizacja</th><th>Data</th></tr></thead>
                 <tbody>
                 @forelse ($recentWorkLogs as $log)
@@ -61,7 +59,7 @@
                     <tr><td colspan="3" class="table__empty">Brak wpisów.</td></tr>
                 @endforelse
                 </tbody>
-            </table>
+            </table></div>
         </div>
     </div>
 </div>

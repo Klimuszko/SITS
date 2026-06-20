@@ -1,10 +1,5 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Pulpit supportu</h1>
-            <p>Tickety i organizacje, które obsługujesz.</p>
-        </div>
-    </div>
+    <x-page-header title="Pulpit supportu" description="Tickety i organizacje, które obsługujesz." />
 
     <div class="grid grid--3" style="margin-bottom:22px">
         <div class="card"><div class="card__body stat">
@@ -24,7 +19,7 @@
     <div class="grid grid--2">
         <div class="card">
             <div class="card__head">Nowe tickety z moich organizacji</div>
-            <table class="table">
+            <div class="table-wrap"><table class="table">
                 <thead><tr><th>Numer</th><th>Tytuł</th><th>Organizacja</th></tr></thead>
                 <tbody>
                 @forelse ($newTickets as $ticket)
@@ -37,12 +32,12 @@
                     <tr><td colspan="3" class="table__empty">Brak nowych ticketów.</td></tr>
                 @endforelse
                 </tbody>
-            </table>
+            </table></div>
         </div>
 
         <div class="card">
             <div class="card__head">Moje przypisane tickety</div>
-            <table class="table">
+            <div class="table-wrap"><table class="table">
                 <thead><tr><th>Numer</th><th>Tytuł</th><th>Status</th></tr></thead>
                 <tbody>
                 @forelse ($myTickets as $ticket)
@@ -55,13 +50,13 @@
                     <tr><td colspan="3" class="table__empty">Brak przypisanych ticketów.</td></tr>
                 @endforelse
                 </tbody>
-            </table>
+            </table></div>
         </div>
     </div>
 
     <div class="card" style="margin-top:18px">
         <div class="card__head">Organizacje, które obsługuję</div>
-        <table class="table">
+        <div class="table-wrap"><table class="table">
             <thead><tr><th>Organizacja</th><th>Rola</th></tr></thead>
             <tbody>
             @forelse ($organizations as $org)
@@ -73,6 +68,6 @@
                 <tr><td colspan="2" class="table__empty">Brak przypisanych organizacji.</td></tr>
             @endforelse
             </tbody>
-        </table>
+        </table></div>
     </div>
 </div>

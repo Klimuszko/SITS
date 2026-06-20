@@ -1,11 +1,9 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Witaj, {{ auth()->user()->name }}</h1>
-            <p>Twoje zgłoszenia i zasoby.</p>
-        </div>
-        <a href="{{ route('tickets.create') }}" wire:navigate class="btn btn--primary">+ Nowe zgłoszenie</a>
-    </div>
+    <x-page-header :title="'Witaj, '.auth()->user()->name" description="Twoje zgłoszenia i zasoby.">
+        <x-slot:actions>
+            <a href="{{ route('tickets.create') }}" wire:navigate class="btn btn--primary">+ Nowe zgłoszenie</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <div class="grid grid--3" style="margin-bottom:22px">
         <div class="card"><div class="card__body stat">
@@ -25,7 +23,7 @@
     <div class="grid grid--2">
         <div class="card">
             <div class="card__head">Moje ostatnie zgłoszenia</div>
-            <table class="table">
+            <div class="table-wrap"><table class="table">
                 <thead><tr><th>Numer</th><th>Tytuł</th><th>Status</th></tr></thead>
                 <tbody>
                 @forelse ($myRecentTickets as $ticket)
@@ -38,12 +36,12 @@
                     <tr><td colspan="3" class="table__empty">Nie masz jeszcze zgłoszeń.</td></tr>
                 @endforelse
                 </tbody>
-            </table>
+            </table></div>
         </div>
 
         <div class="card">
             <div class="card__head">Moje zasoby prywatne</div>
-            <table class="table">
+            <div class="table-wrap"><table class="table">
                 <thead><tr><th>Nazwa</th><th>Kategoria</th></tr></thead>
                 <tbody>
                 @forelse ($privateAssets as $asset)
@@ -55,7 +53,7 @@
                     <tr><td colspan="2" class="table__empty">Brak zasobów prywatnych.</td></tr>
                 @endforelse
                 </tbody>
-            </table>
+            </table></div>
         </div>
     </div>
 </div>
