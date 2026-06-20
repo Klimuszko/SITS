@@ -157,10 +157,12 @@ docker/{php, nginx}/
 
 ### Ikony menu (podmiana na własne)
 
-Ikony menu bocznego to pliki SVG w **`resources/icons/menu/`** — jeden plik na ikonę,
-inline'owany przez komponent `<x-icon name="...">` (dziedziczy `currentColor`, więc działa
-w motywie jasnym i ciemnym). Aby zmienić ikonę, **podmień plik `.svg`** (zachowując nazwę) —
-bez ruszania kodu i bez panelu. Brak pliku = pozycja menu działa bez ikony (zero błędów).
+Ikony menu zmienia się **z panelu admina: Ustawienia → Ikony menu** (upload SVG per ikona;
+plik jest sanityzowany i zapisywany jako trwały override na dysku prywatnym
+`storage/app/private/menu-icons/{name}.svg`, więc przeżywa redeploy; „Domyślna" usuwa override).
+Domyślne ikony to pliki SVG w **`resources/icons/menu/`** (jeden plik na ikonę), inline'owane
+przez `<x-icon name="...">` (dziedziczą `currentColor` → motyw jasny/ciemny). `<x-icon>` bierze
+najpierw override z panelu, potem domyślny plik z repo. Brak obu = pozycja menu bez ikony (zero błędów).
 
 Nazwa pliku = wartość `'icon'` przypisana pozycji/kategorii w `app/Support/Navigation.php`.
 Mapowanie:
@@ -177,10 +179,9 @@ Mapowanie:
 | Przycisk zwijania menu | `chevron-left.svg` |
 
 Zalecenie: SVG 24×24, `fill="none" stroke="currentColor"` (styl outline), bez wpisanych
-kolorów — wtedy ikona dopasuje się do motywu. Pliki w tym katalogu są **zaufane** (dodaje je
-osoba z dostępem do repo/serwera), więc nie są sanityzowane — nie wrzucaj tu SVG z
-niezaufanych źródeł. (Opcjonalny upload z panelu admina byłby możliwy później, z sanityzacją
-SVG jak przy logo — patrz `App\Support\SvgSanitizer` — ale nie jest wymagany.)
+kolorów — wtedy ikona dopasuje się do motywu. Uploady z panelu są **sanityzowane**
+(`App\Support\SvgSanitizer` — usuwa script/foreignObject/on*/itd.), bo ikona jest inline'owana
+na każdej stronie. Domyślne pliki w repo są zaufane (commit przez dewelopera).
 
 ---
 
