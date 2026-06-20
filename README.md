@@ -149,10 +149,38 @@ config/         # app, database, cache, queue, session, filesystems, auth, purif
 database/
   migrations/   # pełny schemat (§32)
   seeders/      # Super Admin (z .env), słowniki, dane demo PAKO Engineering (PL)
-resources/views/{layouts, livewire, pagination}
+resources/views/{layouts, livewire, components, pagination}
+resources/icons/menu/  # ikony SVG menu bocznego (podmienialne — patrz niżej)
 lang/{pl, en}/  # tłumaczenia (start: pl)
 docker/{php, nginx}/
 ```
+
+### Ikony menu (podmiana na własne)
+
+Ikony menu bocznego to pliki SVG w **`resources/icons/menu/`** — jeden plik na ikonę,
+inline'owany przez komponent `<x-icon name="...">` (dziedziczy `currentColor`, więc działa
+w motywie jasnym i ciemnym). Aby zmienić ikonę, **podmień plik `.svg`** (zachowując nazwę) —
+bez ruszania kodu i bez panelu. Brak pliku = pozycja menu działa bez ikony (zero błędów).
+
+Nazwa pliku = wartość `'icon'` przypisana pozycji/kategorii w `app/Support/Navigation.php`.
+Mapowanie:
+
+| Sekcja / pozycja menu | Plik SVG |
+|---|---|
+| Pulpit | `dashboard.svg` |
+| Zgłoszenia · Baza wiedzy | `ticket.svg` · `book.svg` |
+| Zasoby · Lokalizacje | `server.svg` · `map-pin.svg` |
+| Organizacje · Użytkownicy | `building.svg` · `users.svg` |
+| Prace administracyjne | `clipboard.svg` |
+| Słowniki · Audyt · Ustawienia | `sliders.svg` · `shield.svg` · `settings.svg` |
+| Nagłówki kategorii (Wsparcie/Zasoby/Klienci/Praca/Administracja) | `life-ring/server/building/clipboard/settings.svg` |
+| Przycisk zwijania menu | `chevron-left.svg` |
+
+Zalecenie: SVG 24×24, `fill="none" stroke="currentColor"` (styl outline), bez wpisanych
+kolorów — wtedy ikona dopasuje się do motywu. Pliki w tym katalogu są **zaufane** (dodaje je
+osoba z dostępem do repo/serwera), więc nie są sanityzowane — nie wrzucaj tu SVG z
+niezaufanych źródeł. (Opcjonalny upload z panelu admina byłby możliwy później, z sanityzacją
+SVG jak przy logo — patrz `App\Support\SvgSanitizer` — ale nie jest wymagany.)
 
 ---
 
