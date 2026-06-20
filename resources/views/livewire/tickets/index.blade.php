@@ -8,13 +8,13 @@
     </x-page-header>
 
     <div class="toolbar">
-        <input type="search" class="input" placeholder="Szukaj po numerze lub tytule…" wire:model.live.debounce.300ms="search">
-        <select class="select" wire:model.live="view">
+        <input type="search" class="input" aria-label="Szukaj zgłoszeń" placeholder="Szukaj po numerze lub tytule…" wire:model.live.debounce.300ms="search">
+        <select class="select" aria-label="Widok zgłoszeń" wire:model.live="view">
             <option value="open">Otwarte</option>
             <option value="all">Wszystkie</option>
             <option value="mine">Moje zgłoszenia</option>
         </select>
-        <select class="select" wire:model.live="status">
+        <select class="select" aria-label="Filtruj wg statusu" wire:model.live="status">
             <option value="">Każdy status</option>
             @foreach ($statuses as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
@@ -27,13 +27,13 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Numer</th>
-                    <th>Tytuł</th>
-                    <th>Organizacja</th>
-                    <th>Status</th>
-                    <th>Priorytet</th>
-                    <th>Opiekun</th>
-                    <th>Ostatnia odpowiedź</th>
+                    <th scope="col">Numer</th>
+                    <th scope="col">Tytuł</th>
+                    <th scope="col">Organizacja</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Priorytet</th>
+                    <th scope="col">Opiekun</th>
+                    <th scope="col">Ostatnia odpowiedź</th>
                 </tr>
             </thead>
             <tbody>

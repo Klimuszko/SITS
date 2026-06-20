@@ -67,11 +67,11 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Poziom</th>
-                    <th>Nazwa</th>
-                    <th>Kolor</th>
-                    <th>Status</th>
-                    <th></th>
+                    <th scope="col">Poziom</th>
+                    <th scope="col">Nazwa</th>
+                    <th scope="col">Kolor</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>

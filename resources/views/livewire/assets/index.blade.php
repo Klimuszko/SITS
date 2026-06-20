@@ -8,20 +8,20 @@
     </x-page-header>
 
     <div class="toolbar">
-        <input type="search" class="input" placeholder="Szukaj po nazwie lub kodzie inwentarzowym…" wire:model.live.debounce.300ms="search">
-        <select class="select" wire:model.live="organization">
+        <input type="search" class="input" aria-label="Szukaj zasobów" placeholder="Szukaj po nazwie lub kodzie inwentarzowym…" wire:model.live.debounce.300ms="search">
+        <select class="select" aria-label="Filtruj wg organizacji" wire:model.live="organization">
             <option value="">Każda organizacja</option>
             @foreach ($organizations as $org)
                 <option value="{{ $org->id }}">{{ $org->name }}</option>
             @endforeach
         </select>
-        <select class="select" wire:model.live="category">
+        <select class="select" aria-label="Filtruj wg kategorii" wire:model.live="category">
             <option value="">Każda kategoria</option>
             @foreach ($categories as $cat)
                 <option value="{{ $cat->id }}">{{ $cat->name }}</option>
             @endforeach
         </select>
-        <select class="select" wire:model.live="status">
+        <select class="select" aria-label="Filtruj wg statusu" wire:model.live="status">
             <option value="">Każdy status</option>
             @foreach ($statuses as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
@@ -34,12 +34,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Nazwa</th>
-                    <th>Organizacja</th>
-                    <th>Kategoria</th>
-                    <th>Lokalizacja</th>
-                    <th>Status</th>
-                    <th>Rodzic</th>
+                    <th scope="col">Nazwa</th>
+                    <th scope="col">Organizacja</th>
+                    <th scope="col">Kategoria</th>
+                    <th scope="col">Lokalizacja</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Rodzic</th>
                 </tr>
             </thead>
             <tbody>

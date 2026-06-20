@@ -6,13 +6,13 @@
     </x-page-header>
 
     <div class="toolbar">
-        <select class="select" wire:model.live="organization_id">
+        <select class="select" aria-label="Wybierz organizację" wire:model.live="organization_id">
             <option value="">— wybierz organizację —</option>
             @foreach ($organizations as $org)
                 <option value="{{ $org->id }}">{{ $org->name }}</option>
             @endforeach
         </select>
-        <input type="month" class="input" wire:model.live="month">
+        <input type="month" class="input" aria-label="Wybierz miesiąc" wire:model.live="month">
     </div>
 
     @if ($organization_id === null)
@@ -48,11 +48,11 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Data</th>
-                        <th>Tytuł</th>
-                        <th>Wykonawca</th>
-                        <th>Rodzaj</th>
-                        <th>Czas</th>
+                        <th scope="col">Data</th>
+                        <th scope="col">Tytuł</th>
+                        <th scope="col">Wykonawca</th>
+                        <th scope="col">Rodzaj</th>
+                        <th scope="col">Czas</th>
                     </tr>
                 </thead>
                 <tbody>

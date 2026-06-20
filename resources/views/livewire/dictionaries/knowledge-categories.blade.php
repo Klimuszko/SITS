@@ -55,10 +55,10 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Nazwa</th>
-                    <th>Nadrzędna</th>
-                    <th>Status</th>
-                    <th></th>
+                    <th scope="col">Nazwa</th>
+                    <th scope="col">Nadrzędna</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>

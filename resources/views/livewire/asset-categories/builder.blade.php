@@ -227,13 +227,13 @@
             <table class="table" style="margin-top:18px">
                 <thead>
                     <tr>
-                        <th>Kolejność</th>
-                        <th>Nazwa</th>
-                        <th>Typ</th>
-                        <th>Węzeł</th>
-                        <th>Wymagane</th>
-                        <th>Status</th>
-                        <th></th>
+                        <th scope="col">Kolejność</th>
+                        <th scope="col">Nazwa</th>
+                        <th scope="col">Typ</th>
+                        <th scope="col">Węzeł</th>
+                        <th scope="col">Wymagane</th>
+                        <th scope="col">Status</th>
+                        <th scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

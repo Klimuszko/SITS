@@ -20,7 +20,7 @@
         <div class="card">
             <div class="card__head">Nowe tickety z moich organizacji</div>
             <div class="table-wrap"><table class="table">
-                <thead><tr><th>Numer</th><th>Tytuł</th><th>Organizacja</th></tr></thead>
+                <thead><tr><th scope="col">Numer</th><th scope="col">Tytuł</th><th scope="col">Organizacja</th></tr></thead>
                 <tbody>
                 @forelse ($newTickets as $ticket)
                     <tr>
@@ -38,7 +38,7 @@
         <div class="card">
             <div class="card__head">Moje przypisane tickety</div>
             <div class="table-wrap"><table class="table">
-                <thead><tr><th>Numer</th><th>Tytuł</th><th>Status</th></tr></thead>
+                <thead><tr><th scope="col">Numer</th><th scope="col">Tytuł</th><th scope="col">Status</th></tr></thead>
                 <tbody>
                 @forelse ($myTickets as $ticket)
                     <tr>
@@ -57,7 +57,7 @@
     <div class="card" style="margin-top:18px">
         <div class="card__head">Organizacje, które obsługuję</div>
         <div class="table-wrap"><table class="table">
-            <thead><tr><th>Organizacja</th><th>Rola</th></tr></thead>
+            <thead><tr><th scope="col">Organizacja</th><th scope="col">Rola</th></tr></thead>
             <tbody>
             @forelse ($organizations as $org)
                 <tr>

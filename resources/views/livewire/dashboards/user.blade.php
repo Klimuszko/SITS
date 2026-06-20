@@ -24,7 +24,7 @@
         <div class="card">
             <div class="card__head">Moje ostatnie zgłoszenia</div>
             <div class="table-wrap"><table class="table">
-                <thead><tr><th>Numer</th><th>Tytuł</th><th>Status</th></tr></thead>
+                <thead><tr><th scope="col">Numer</th><th scope="col">Tytuł</th><th scope="col">Status</th></tr></thead>
                 <tbody>
                 @forelse ($myRecentTickets as $ticket)
                     <tr>
@@ -42,7 +42,7 @@
         <div class="card">
             <div class="card__head">Moje zasoby prywatne</div>
             <div class="table-wrap"><table class="table">
-                <thead><tr><th>Nazwa</th><th>Kategoria</th></tr></thead>
+                <thead><tr><th scope="col">Nazwa</th><th scope="col">Kategoria</th></tr></thead>
                 <tbody>
                 @forelse ($privateAssets as $asset)
                     <tr>

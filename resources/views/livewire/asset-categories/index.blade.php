@@ -58,12 +58,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Nazwa</th>
-                    <th>Klucz</th>
-                    <th>Sekcje</th>
-                    <th>Pola</th>
-                    <th>Status</th>
-                    <th></th>
+                    <th scope="col">Nazwa</th>
+                    <th scope="col">Klucz</th>
+                    <th scope="col">Sekcje</th>
+                    <th scope="col">Pola</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>

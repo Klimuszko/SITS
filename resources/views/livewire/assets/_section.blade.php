@@ -19,9 +19,9 @@
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th scope="col">#</th>
                             @foreach ($node['group']['columns'] as $col)
-                                <th>{{ $col->name }}</th>
+                                <th scope="col">{{ $col->name }}</th>
                             @endforeach
                         </tr>
                     </thead>

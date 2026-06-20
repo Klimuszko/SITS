@@ -8,15 +8,15 @@
     </x-page-header>
 
     <div class="toolbar">
-        <input type="search" class="input" placeholder="Szukaj po tytule…" wire:model.live.debounce.300ms="search">
-        <select class="select" wire:model.live="category">
+        <input type="search" class="input" aria-label="Szukaj artykułów" placeholder="Szukaj po tytule…" wire:model.live.debounce.300ms="search">
+        <select class="select" aria-label="Filtruj wg kategorii" wire:model.live="category">
             <option value="">Każda kategoria</option>
             @foreach ($categories as $cat)
                 <option value="{{ $cat->id }}">{{ $cat->name }}</option>
             @endforeach
         </select>
         @if ($isStaff)
-            <select class="select" wire:model.live="status">
+            <select class="select" aria-label="Filtruj wg statusu" wire:model.live="status">
                 <option value="">Każdy status</option>
                 @foreach ($statuses as $value => $label)
                     <option value="{{ $value }}">{{ $label }}</option>
@@ -30,11 +30,11 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Tytuł</th>
-                    <th>Kategoria</th>
-                    <th>Status</th>
-                    <th>Autor</th>
-                    <th>Opublikowano</th>
+                    <th scope="col">Tytuł</th>
+                    <th scope="col">Kategoria</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Autor</th>
+                    <th scope="col">Opublikowano</th>
                 </tr>
             </thead>
             <tbody>

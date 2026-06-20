@@ -38,19 +38,19 @@
     @endif
 
     <div class="toolbar">
-        <select class="select" wire:model.live="action">
+        <select class="select" aria-label="Filtruj wg akcji" wire:model.live="action">
             <option value="">Każda akcja</option>
             @foreach ($actions as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
             @endforeach
         </select>
-        <select class="select" wire:model.live="user">
+        <select class="select" aria-label="Filtruj wg użytkownika" wire:model.live="user">
             <option value="">Każdy użytkownik</option>
             @foreach ($users as $u)
                 <option value="{{ $u->id }}">{{ $u->name }}</option>
             @endforeach
         </select>
-        <select class="select" wire:model.live="subjectType">
+        <select class="select" aria-label="Filtruj wg typu obiektu" wire:model.live="subjectType">
             <option value="">Każdy typ obiektu</option>
             @foreach ($subjectTypes as $type)
                 <option value="{{ $type }}">{{ class_basename($type) }}</option>
@@ -65,12 +65,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Czas</th>
-                    <th>Użytkownik</th>
-                    <th>Akcja</th>
-                    <th>Obiekt</th>
-                    <th>IP</th>
-                    <th></th>
+                    <th scope="col">Czas</th>
+                    <th scope="col">Użytkownik</th>
+                    <th scope="col">Akcja</th>
+                    <th scope="col">Obiekt</th>
+                    <th scope="col">IP</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>

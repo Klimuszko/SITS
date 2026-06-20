@@ -20,7 +20,7 @@
         <div class="card">
             <div class="card__head">Ostatnie zgłoszenia</div>
             <div class="table-wrap"><table class="table">
-                <thead><tr><th>Numer</th><th>Tytuł</th><th>Status</th></tr></thead>
+                <thead><tr><th scope="col">Numer</th><th scope="col">Tytuł</th><th scope="col">Status</th></tr></thead>
                 <tbody>
                 @forelse ($recentTickets as $ticket)
                     <tr>
@@ -38,7 +38,7 @@
         <div class="card">
             <div class="card__head">Ostatnie prace administracyjne</div>
             <div class="table-wrap"><table class="table">
-                <thead><tr><th>Tytuł</th><th>Zasób</th><th>Data</th></tr></thead>
+                <thead><tr><th scope="col">Tytuł</th><th scope="col">Zasób</th><th scope="col">Data</th></tr></thead>
                 <tbody>
                 @forelse ($recentWorkLogs as $log)
                     <tr>

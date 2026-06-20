@@ -8,20 +8,20 @@
     </x-page-header>
 
     <div class="toolbar">
-        <input type="search" class="input" placeholder="Szukaj po nazwie…" wire:model.live.debounce.300ms="search">
-        <select class="select" wire:model.live="organization">
+        <input type="search" class="input" aria-label="Szukaj lokalizacji" placeholder="Szukaj po nazwie…" wire:model.live.debounce.300ms="search">
+        <select class="select" aria-label="Filtruj wg organizacji" wire:model.live="organization">
             <option value="">Każda organizacja</option>
             @foreach ($organizations as $org)
                 <option value="{{ $org->id }}">{{ $org->name }}</option>
             @endforeach
         </select>
-        <select class="select" wire:model.live="type">
+        <select class="select" aria-label="Filtruj wg typu" wire:model.live="type">
             <option value="">Każdy typ</option>
             @foreach ($types as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
             @endforeach
         </select>
-        <select class="select" wire:model.live="status">
+        <select class="select" aria-label="Filtruj wg statusu" wire:model.live="status">
             <option value="">Każdy status</option>
             @foreach ($statuses as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
@@ -34,14 +34,14 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Nazwa</th>
-                    <th>Organizacja</th>
-                    <th>Typ</th>
-                    <th>Nadrzędna</th>
-                    <th>Podrzędne</th>
-                    <th>Zasoby</th>
-                    <th>Status</th>
-                    <th></th>
+                    <th scope="col">Nazwa</th>
+                    <th scope="col">Organizacja</th>
+                    <th scope="col">Typ</th>
+                    <th scope="col">Nadrzędna</th>
+                    <th scope="col">Podrzędne</th>
+                    <th scope="col">Zasoby</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>

@@ -8,8 +8,8 @@
     </x-page-header>
 
     <div class="toolbar">
-        <input type="search" class="input" placeholder="Szukaj po nazwie…" wire:model.live.debounce.300ms="search">
-        <select class="select" wire:model.live="status">
+        <input type="search" class="input" aria-label="Szukaj organizacji" placeholder="Szukaj po nazwie…" wire:model.live.debounce.300ms="search">
+        <select class="select" aria-label="Filtruj wg statusu" wire:model.live="status">
             <option value="">Wszystkie statusy</option>
             @foreach ($statuses as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
@@ -22,13 +22,13 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Nazwa</th>
-                    <th>Typ</th>
-                    <th>Nadrzędna</th>
-                    <th>Domyślny support</th>
-                    <th>Użytkownicy</th>
-                    <th>Status</th>
-                    <th></th>
+                    <th scope="col">Nazwa</th>
+                    <th scope="col">Typ</th>
+                    <th scope="col">Nadrzędna</th>
+                    <th scope="col">Domyślny support</th>
+                    <th scope="col">Użytkownicy</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>

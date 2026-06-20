@@ -11,15 +11,15 @@
     </x-page-header>
 
     <div class="toolbar">
-        <input type="search" class="input" placeholder="Szukaj po tytule…" wire:model.live.debounce.300ms="search">
-        <select class="select" wire:model.live="organization">
+        <input type="search" class="input" aria-label="Szukaj prac" placeholder="Szukaj po tytule…" wire:model.live.debounce.300ms="search">
+        <select class="select" aria-label="Filtruj wg organizacji" wire:model.live="organization">
             <option value="">Każda organizacja</option>
             @foreach ($organizations as $org)
                 <option value="{{ $org->id }}">{{ $org->name }}</option>
             @endforeach
         </select>
-        <input type="search" class="input" placeholder="Rodzaj pracy…" wire:model.live.debounce.300ms="work_type">
-        <input type="month" class="input" wire:model.live="month">
+        <input type="search" class="input" aria-label="Filtruj wg rodzaju pracy" placeholder="Rodzaj pracy…" wire:model.live.debounce.300ms="work_type">
+        <input type="month" class="input" aria-label="Filtruj wg miesiąca" wire:model.live="month">
     </div>
 
     <div class="card">
@@ -27,14 +27,14 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Data</th>
-                    <th>Tytuł</th>
-                    <th>Organizacja</th>
-                    <th>Wykonawca</th>
-                    <th>Czas</th>
-                    <th>Status</th>
+                    <th scope="col">Data</th>
+                    <th scope="col">Tytuł</th>
+                    <th scope="col">Organizacja</th>
+                    <th scope="col">Wykonawca</th>
+                    <th scope="col">Czas</th>
+                    <th scope="col">Status</th>
                     @if ($isStaff)
-                        <th>Widoczność</th>
+                        <th scope="col">Widoczność</th>
                     @endif
                 </tr>
             </thead>
