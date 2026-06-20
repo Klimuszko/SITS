@@ -5,6 +5,7 @@ namespace App\Livewire\AssetCategories;
 use App\Enums\AuditAction;
 use App\Models\AssetCategory;
 use App\Services\AuditLogger;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -70,6 +71,12 @@ class Index extends Component
     public function save(): void
     {
         $this->authorize('manage-categories');
+
+        // Klucz = identyfikator techniczny, generowany automatycznie z nazwy i UKRYTY w UI.
+        // Na edycji zachowujemy istniejący; na tworzeniu generujemy UNIKALNY (sufiks -2, -3, ...).
+        if (blank($this->key)) {
+            $this->key = $this->uniqueKey(Str::slug($this->name));
+        }
 
         $data = $this->validate();
 
@@ -140,6 +147,23 @@ class Index extends Component
         }
 
         session()->flash('status', 'Kategoria została trwale usunięta.');
+    }
+
+    /** Unikalny klucz (sufiks -2, -3, ...), ignorując bieżąco edytowaną kategorię. */
+    protected function uniqueKey(string $base): string
+    {
+        $base = $base !== '' ? $base : 'kategoria';
+        $key = $base;
+        $i = 2;
+
+        while (AssetCategory::where('key', $key)
+            ->when($this->editingId, fn ($q) => $q->whereKeyNot($this->editingId))
+            ->exists()) {
+            $key = $base.'-'.$i;
+            $i++;
+        }
+
+        return $key;
     }
 
     public function resetForm(): void

@@ -21,12 +21,6 @@
                     </div>
 
                     <div class="field">
-                        <label for="key">Klucz * <span class="hint">— identyfikator techniczny</span></label>
-                        <input id="key" class="input" wire:model="key">
-                        @error('key') <span class="error">{{ $message }}</span> @enderror
-                    </div>
-
-                    <div class="field">
                         <label for="icon">Ikona <span class="hint">— opcjonalna</span></label>
                         <input id="icon" class="input" wire:model="icon">
                         @error('icon') <span class="error">{{ $message }}</span> @enderror

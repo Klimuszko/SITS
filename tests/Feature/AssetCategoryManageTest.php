@@ -20,11 +20,11 @@ class AssetCategoryManageTest extends TestCase
         $this->actingAs(User::factory()->admin()->create());
     }
 
-    public function test_admin_creates_category(): void
+    public function test_admin_creates_category_with_auto_key(): void
     {
+        // Klucz jest UKRYTY w UI i generuje się automatycznie z nazwy ('Serwery' → 'serwery').
         Livewire::test(Index::class)
             ->set('name', 'Serwery')
-            ->set('key', 'serwery')
             ->set('icon', 'server')
             ->set('description', 'Zasoby serwerowe.')
             ->set('is_active', true)
@@ -39,24 +39,26 @@ class AssetCategoryManageTest extends TestCase
         ]);
     }
 
-    public function test_key_must_be_unique(): void
+    public function test_key_auto_generates_unique_suffix(): void
     {
-        AssetCategory::factory()->create(['key' => 'serwery']);
+        // Istnieje już kategoria z kluczem 'serwery' — nowa o tej samej nazwie dostaje 'serwery-2'.
+        AssetCategory::factory()->create(['key' => 'serwery', 'name' => 'Serwery']);
 
         Livewire::test(Index::class)
-            ->set('name', 'Inne serwery')
-            ->set('key', 'serwery')
+            ->set('name', 'Serwery')
             ->call('save')
-            ->assertHasErrors(['key' => 'unique']);
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('asset_categories', ['name' => 'Serwery', 'key' => 'serwery-2']);
     }
 
-    public function test_name_and_key_are_required(): void
+    public function test_name_is_required(): void
     {
+        // Klucz nie jest już polem użytkownika (auto-generowany), więc wymagana jest tylko nazwa.
         Livewire::test(Index::class)
             ->set('name', '')
-            ->set('key', '')
             ->call('save')
-            ->assertHasErrors(['name' => 'required', 'key' => 'required']);
+            ->assertHasErrors(['name' => 'required']);
     }
 
     public function test_editing_keeps_own_key(): void

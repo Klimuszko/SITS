@@ -1,6 +1,6 @@
 <div>
     <x-page-header :title="$category->name">
-        <p>Struktura, sekcje i pola kategorii zasobu <span class="muted">({{ $category->key }})</span>.</p>
+        <p>Struktura, sekcje i pola kategorii zasobu.</p>
         <x-slot:actions>
             <a href="{{ route('dictionaries.asset-categories') }}" wire:navigate class="btn btn--ghost btn--sm">
                 ← Wróć do kategorii
