@@ -1,10 +1,5 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Słowniki</h1>
-            <p>Kategorie zasobów — definiowanie typów zasobów (CMDB).</p>
-        </div>
-    </div>
+    <x-page-header title="Słowniki" description="Kategorie zasobów — definiowanie typów zasobów (CMDB)." />
 
     @include('livewire.dictionaries._tabs')
 
@@ -65,6 +60,7 @@
     </form>
 
     <div class="card" style="margin-top:18px">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -120,5 +116,6 @@
             @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 </div>

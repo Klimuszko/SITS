@@ -1,13 +1,11 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Organizacje</h1>
-            <p>Klienci obsługiwani w systemie.</p>
-        </div>
+    <x-page-header title="Organizacje" description="Klienci obsługiwani w systemie.">
         @can('create', App\Models\Organization::class)
-            <a href="{{ route('organizations.create') }}" wire:navigate class="btn btn--primary">+ Nowa organizacja</a>
+            <x-slot:actions>
+                <a href="{{ route('organizations.create') }}" wire:navigate class="btn btn--primary">+ Nowa organizacja</a>
+            </x-slot:actions>
         @endcan
-    </div>
+    </x-page-header>
 
     <div class="toolbar">
         <input type="search" class="input" placeholder="Szukaj po nazwie…" wire:model.live.debounce.300ms="search">
@@ -20,6 +18,7 @@
     </div>
 
     <div class="card">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -58,6 +57,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
 
         @if ($organizations->hasPages())
             {{ $organizations->links() }}

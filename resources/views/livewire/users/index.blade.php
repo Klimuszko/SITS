@@ -1,13 +1,11 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Użytkownicy</h1>
-            <p>Konta personelu i klientów oraz ich członkostwa w organizacjach.</p>
-        </div>
+    <x-page-header title="Użytkownicy" description="Konta personelu i klientów oraz ich członkostwa w organizacjach.">
         @can('create', App\Models\User::class)
-            <a href="{{ route('users.create') }}" wire:navigate class="btn btn--primary">+ Nowy użytkownik</a>
+            <x-slot:actions>
+                <a href="{{ route('users.create') }}" wire:navigate class="btn btn--primary">+ Nowy użytkownik</a>
+            </x-slot:actions>
         @endcan
-    </div>
+    </x-page-header>
 
     <div class="toolbar">
         <input type="search" class="input" placeholder="Szukaj po nazwie lub e-mailu…" wire:model.live.debounce.300ms="search">
@@ -25,6 +23,7 @@
     </div>
 
     <div class="card">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -61,6 +60,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
 
         @if ($users->hasPages())
             {{ $users->links() }}

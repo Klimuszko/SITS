@@ -1,10 +1,5 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Słowniki</h1>
-            <p>Priorytety zgłoszeń — poziom 1 (najniższy) do 4 (krytyczny).</p>
-        </div>
-    </div>
+    <x-page-header title="Słowniki" description="Priorytety zgłoszeń — poziom 1 (najniższy) do 4 (krytyczny)." />
 
     @include('livewire.dictionaries._tabs')
 
@@ -68,6 +63,7 @@
     </form>
 
     <div class="card" style="margin-top:18px">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -119,5 +115,6 @@
             @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 </div>

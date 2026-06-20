@@ -1,13 +1,11 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Lokalizacje</h1>
-            <p>Hierarchia lokalizacji w zakresie Twoich uprawnień.</p>
-        </div>
+    <x-page-header title="Lokalizacje" description="Hierarchia lokalizacji w zakresie Twoich uprawnień.">
         @if ($canCreate)
-            <a href="{{ route('locations.create') }}" wire:navigate class="btn btn--primary">+ Nowa lokalizacja</a>
+            <x-slot:actions>
+                <a href="{{ route('locations.create') }}" wire:navigate class="btn btn--primary">+ Nowa lokalizacja</a>
+            </x-slot:actions>
         @endif
-    </div>
+    </x-page-header>
 
     <div class="toolbar">
         <input type="search" class="input" placeholder="Szukaj po nazwie…" wire:model.live.debounce.300ms="search">
@@ -32,6 +30,7 @@
     </div>
 
     <div class="card">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -66,6 +65,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
 
         @if ($locations->hasPages())
             {{ $locations->links() }}

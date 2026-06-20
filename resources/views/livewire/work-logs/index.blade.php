@@ -1,16 +1,14 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Prace administracyjne</h1>
-            <p>Rejestr prac wykonanych dla klientów — w zakresie Twoich uprawnień.</p>
-        </div>
-        <div style="display:flex;gap:10px">
-            <a href="{{ route('work-logs.report') }}" wire:navigate class="btn btn--ghost">Raport miesięczny</a>
-            @if ($canCreate)
-                <a href="{{ route('work-logs.create') }}" wire:navigate class="btn btn--primary">+ Nowa praca</a>
-            @endif
-        </div>
-    </div>
+    <x-page-header title="Prace administracyjne" description="Rejestr prac wykonanych dla klientów — w zakresie Twoich uprawnień.">
+        <x-slot:actions>
+            <div style="display:flex;gap:10px">
+                <a href="{{ route('work-logs.report') }}" wire:navigate class="btn btn--ghost">Raport miesięczny</a>
+                @if ($canCreate)
+                    <a href="{{ route('work-logs.create') }}" wire:navigate class="btn btn--primary">+ Nowa praca</a>
+                @endif
+            </div>
+        </x-slot:actions>
+    </x-page-header>
 
     <div class="toolbar">
         <input type="search" class="input" placeholder="Szukaj po tytule…" wire:model.live.debounce.300ms="search">
@@ -25,6 +23,7 @@
     </div>
 
     <div class="card">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -73,6 +72,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
 
         @if ($logs->hasPages())
             {{ $logs->links() }}

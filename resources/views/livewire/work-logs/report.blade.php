@@ -1,11 +1,9 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Raport miesięczny prac administracyjnych</h1>
-            <p>Zestawienie prac wykonanych dla organizacji w wybranym miesiącu.</p>
-        </div>
-        <a href="{{ route('work-logs.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header title="Raport miesięczny prac administracyjnych" description="Zestawienie prac wykonanych dla organizacji w wybranym miesiącu.">
+        <x-slot:actions>
+            <a href="{{ route('work-logs.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <div class="toolbar">
         <select class="select" wire:model.live="organization_id">
@@ -46,6 +44,7 @@
         </div>
 
         <div class="card">
+            <div class="table-wrap">
             <table class="table">
                 <thead>
                     <tr>
@@ -78,6 +77,7 @@
                     </tfoot>
                 @endif
             </table>
+            </div>
         </div>
     @endif
 </div>

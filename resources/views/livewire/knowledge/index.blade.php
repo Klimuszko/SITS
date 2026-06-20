@@ -1,13 +1,11 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Baza wiedzy</h1>
-            <p>Artykuły i instrukcje w zakresie Twoich uprawnień.</p>
-        </div>
+    <x-page-header title="Baza wiedzy" description="Artykuły i instrukcje w zakresie Twoich uprawnień.">
         @if ($canCreate)
-            <a href="{{ route('knowledge.create') }}" wire:navigate class="btn btn--primary">+ Nowy artykuł</a>
+            <x-slot:actions>
+                <a href="{{ route('knowledge.create') }}" wire:navigate class="btn btn--primary">+ Nowy artykuł</a>
+            </x-slot:actions>
         @endif
-    </div>
+    </x-page-header>
 
     <div class="toolbar">
         <input type="search" class="input" placeholder="Szukaj po tytule…" wire:model.live.debounce.300ms="search">
@@ -28,6 +26,7 @@
     </div>
 
     <div class="card">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -52,6 +51,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
 
         @if ($articles->hasPages())
             {{ $articles->links() }}

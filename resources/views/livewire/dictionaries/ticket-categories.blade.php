@@ -1,10 +1,5 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Słowniki</h1>
-            <p>Kategorie zgłoszeń — zarządzanie listą kategorii ticketów.</p>
-        </div>
-    </div>
+    <x-page-header title="Słowniki" description="Kategorie zgłoszeń — zarządzanie listą kategorii ticketów." />
 
     @include('livewire.dictionaries._tabs')
 
@@ -47,6 +42,7 @@
     </form>
 
     <div class="card" style="margin-top:18px">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -94,5 +90,6 @@
             @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 </div>

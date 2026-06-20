@@ -1,10 +1,5 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Audyt</h1>
-            <p>Dziennik zdarzeń systemu (tylko do odczytu).</p>
-        </div>
-    </div>
+    <x-page-header title="Audyt" description="Dziennik zdarzeń systemu (tylko do odczytu)." />
 
     @if (session('status'))
         <div class="alert alert--success" style="margin-bottom:18px">{{ session('status') }}</div>
@@ -51,6 +46,7 @@
     </div>
 
     <div class="card">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -129,6 +125,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
 
         @if ($logs->hasPages())
             {{ $logs->links() }}

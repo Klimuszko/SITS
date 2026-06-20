@@ -1,13 +1,11 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Zasoby</h1>
-            <p>Ewidencja zasobów (CMDB) w zakresie Twoich uprawnień.</p>
-        </div>
+    <x-page-header title="Zasoby" description="Ewidencja zasobów (CMDB) w zakresie Twoich uprawnień.">
         @if ($canCreate)
-            <a href="{{ route('assets.create') }}" wire:navigate class="btn btn--primary">+ Nowy zasób</a>
+            <x-slot:actions>
+                <a href="{{ route('assets.create') }}" wire:navigate class="btn btn--primary">+ Nowy zasób</a>
+            </x-slot:actions>
         @endif
-    </div>
+    </x-page-header>
 
     <div class="toolbar">
         <input type="search" class="input" placeholder="Szukaj po nazwie lub kodzie inwentarzowym…" wire:model.live.debounce.300ms="search">
@@ -32,6 +30,7 @@
     </div>
 
     <div class="card">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -67,6 +66,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
 
         @if ($assets->hasPages())
             {{ $assets->links() }}
