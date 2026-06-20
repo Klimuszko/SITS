@@ -1,15 +1,12 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>{{ $location ? 'Edycja lokalizacji' : 'Nowa lokalizacja' }}</h1>
-            <p>{{ $location?->name ?? 'Utwórz lokalizację w wybranej organizacji.' }}</p>
-        </div>
-        <a href="{{ route('locations.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header :title="$location ? 'Edycja lokalizacji' : 'Nowa lokalizacja'" :description="$location?->name ?? 'Utwórz lokalizację w wybranej organizacji.'">
+        <x-slot:actions>
+            <a href="{{ route('locations.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <form wire:submit="save">
-        <div class="card">
-            <div class="card__body">
+        <x-section title="Dane lokalizacji" card>
                 <div class="form-grid">
                     <div class="field">
                         <label for="organization_id">Organizacja *</label>
@@ -65,8 +62,7 @@
                         @error('description') <span class="error">{{ $message }}</span> @enderror
                     </div>
                 </div>
-            </div>
-        </div>
+        </x-section>
 
         <div style="margin-top:18px;display:flex;gap:10px">
             <button type="submit" class="btn btn--primary" wire:loading.attr="disabled">Zapisz</button>

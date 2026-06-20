@@ -1,16 +1,12 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Mój profil</h1>
-            <p>Zaktualizuj swoje dane kontaktowe i hasło.</p>
-        </div>
-        <a href="{{ route('dashboard') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header title="Mój profil" description="Zaktualizuj swoje dane kontaktowe i hasło.">
+        <x-slot:actions>
+            <a href="{{ route('dashboard') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <form wire:submit="save">
-        <div class="card">
-            <div class="card__head">Dane konta</div>
-            <div class="card__body">
+        <x-section title="Dane konta" card>
                 <div class="form-grid">
                     <div class="field">
                         <label for="name">Imię i nazwisko *</label>
@@ -30,12 +26,9 @@
                         @error('phone') <span class="error">{{ $message }}</span> @enderror
                     </div>
                 </div>
-            </div>
-        </div>
+        </x-section>
 
-        <div class="card" style="margin-top:18px">
-            <div class="card__head">Zmiana hasła <span class="hint">— zostaw puste, aby nie zmieniać</span></div>
-            <div class="card__body">
+        <x-section title="Zmiana hasła" description="— zostaw puste, aby nie zmieniać" card style="margin-top:18px">
                 <div class="form-grid">
                     <div class="field">
                         <label for="currentPassword">Aktualne hasło</label>
@@ -56,8 +49,7 @@
                         <input id="newPassword_confirmation" type="password" class="input" wire:model="newPassword_confirmation" autocomplete="new-password">
                     </div>
                 </div>
-            </div>
-        </div>
+        </x-section>
 
         <div style="margin-top:18px;display:flex;gap:10px">
             <button type="submit" class="btn btn--primary" wire:loading.attr="disabled" wire:target="save">Zapisz</button>

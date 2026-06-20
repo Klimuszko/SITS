@@ -1,11 +1,9 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>{{ $user ? 'Edycja użytkownika' : 'Nowy użytkownik' }}</h1>
-            <p>{{ $user?->name ?? 'Utwórz nowe konto personelu lub klienta.' }}</p>
-        </div>
-        <a href="{{ route('users.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header :title="$user ? 'Edycja użytkownika' : 'Nowy użytkownik'" :description="$user?->name ?? 'Utwórz nowe konto personelu lub klienta.'">
+        <x-slot:actions>
+            <a href="{{ route('users.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <form wire:submit="save">
         <div class="card">

@@ -1,15 +1,12 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>{{ $log ? 'Edycja pracy administracyjnej' : 'Nowa praca administracyjna' }}</h1>
-            <p>{{ $log?->title ?? 'Zarejestruj pracę wykonaną dla klienta.' }}</p>
-        </div>
-        <a href="{{ route('work-logs.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header :title="$log ? 'Edycja pracy administracyjnej' : 'Nowa praca administracyjna'" :description="$log?->title ?? 'Zarejestruj pracę wykonaną dla klienta.'">
+        <x-slot:actions>
+            <a href="{{ route('work-logs.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <form wire:submit="save">
-        <div class="card">
-            <div class="card__body">
+        <x-section title="Szczegóły pracy" card>
                 <div class="form-grid">
                     <div class="field">
                         <label for="organization_id">Organizacja *</label>
@@ -107,8 +104,7 @@
                         <span class="hint">Niewidoczne dla klienta prace pozostają dostępne wyłącznie dla personelu.</span>
                     </div>
                 </div>
-            </div>
-        </div>
+        </x-section>
 
         <div style="margin-top:18px;display:flex;gap:10px">
             <button type="submit" class="btn btn--primary" wire:loading.attr="disabled" wire:target="save">Zapisz</button>

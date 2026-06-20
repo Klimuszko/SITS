@@ -1,15 +1,12 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>{{ $organization ? 'Edycja organizacji' : 'Nowa organizacja' }}</h1>
-            <p>{{ $organization?->name ?? 'Utwórz nowego klienta w systemie.' }}</p>
-        </div>
-        <a href="{{ route('organizations.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header :title="$organization ? 'Edycja organizacji' : 'Nowa organizacja'" :description="$organization?->name ?? 'Utwórz nowego klienta w systemie.'">
+        <x-slot:actions>
+            <a href="{{ route('organizations.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <form wire:submit="save">
-        <div class="card">
-            <div class="card__body">
+        <x-section title="Dane organizacji" card>
                 <div class="form-grid">
                     <div class="field">
                         <label for="name">Nazwa *</label>
@@ -91,8 +88,7 @@
                         @error('internal_note') <span class="error">{{ $message }}</span> @enderror
                     </div>
                 </div>
-            </div>
-        </div>
+        </x-section>
 
         <div style="margin-top:18px;display:flex;gap:10px">
             <button type="submit" class="btn btn--primary" wire:loading.attr="disabled">Zapisz</button>

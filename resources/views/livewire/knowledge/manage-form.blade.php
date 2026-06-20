@@ -1,11 +1,9 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>{{ $article ? 'Edycja artykułu' : 'Nowy artykuł' }}</h1>
-            <p>{{ $article?->title ?? 'Utwórz artykuł bazy wiedzy.' }}</p>
-        </div>
-        <a href="{{ route('knowledge.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header :title="$article ? 'Edycja artykułu' : 'Nowy artykuł'" :description="$article?->title ?? 'Utwórz artykuł bazy wiedzy.'">
+        <x-slot:actions>
+            <a href="{{ route('knowledge.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <form wire:submit="save">
         <div class="card">

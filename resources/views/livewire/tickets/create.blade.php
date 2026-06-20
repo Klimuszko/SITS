@@ -1,15 +1,12 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>Nowe zgłoszenie</h1>
-            <p>Opisz problem — zgłoszenie trafi automatycznie do głównego opiekuna organizacji.</p>
-        </div>
-        <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header title="Nowe zgłoszenie" description="Opisz problem — zgłoszenie trafi automatycznie do głównego opiekuna organizacji.">
+        <x-slot:actions>
+            <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <form wire:submit="save">
-        <div class="card">
-            <div class="card__body">
+        <x-section title="Nowe zgłoszenie" card>
                 <div class="form-grid">
                     <div class="field">
                         <label for="organization_id">Organizacja *</label>
@@ -93,8 +90,7 @@
                         @endif
                     </div>
                 </div>
-            </div>
-        </div>
+        </x-section>
 
         <div style="margin-top:18px;display:flex;gap:10px">
             <button type="submit" class="btn btn--primary" wire:loading.attr="disabled" wire:target="save">Utwórz zgłoszenie</button>

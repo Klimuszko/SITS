@@ -1,11 +1,9 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>{{ $asset ? 'Edycja zasobu' : 'Nowy zasób' }}</h1>
-            <p>{{ $asset?->name ?? 'Dodaj zasób do ewidencji (CMDB).' }}</p>
-        </div>
-        <a href="{{ route('assets.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
-    </div>
+    <x-page-header :title="$asset ? 'Edycja zasobu' : 'Nowy zasób'" :description="$asset?->name ?? 'Dodaj zasób do ewidencji (CMDB).'">
+        <x-slot:actions>
+            <a href="{{ route('assets.index') }}" wire:navigate class="btn btn--ghost">← Powrót</a>
+        </x-slot:actions>
+    </x-page-header>
 
     <form wire:submit="save">
         <div class="card">
