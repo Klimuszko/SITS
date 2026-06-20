@@ -4,6 +4,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\KnowledgeImageController;
 use App\Livewire\AssetCategories\Builder as AssetCategoryBuilder;
 use App\Livewire\AssetCategories\Index as AssetCategoryIndex;
 use App\Livewire\Assets\Index as AssetIndex;
@@ -127,6 +128,9 @@ Route::middleware('auth')->group(function () {
     // Trasa statyczna (/nowy) PRZED /{article}, żeby nie została przechwycona jako parametr.
     Route::get('/baza-wiedzy', KnowledgeIndex::class)->name('knowledge.index');
     Route::get('/baza-wiedzy/nowy', KnowledgeForm::class)->name('knowledge.create');
+    // Inline serwowanie obrazów artykułów (segment statyczny PRZED /{article}, żeby nie został
+    // przechwycony jako parametr). Autoryzacja przez AttachmentPolicy::download → prawo view artykułu.
+    Route::get('/baza-wiedzy/obraz/{attachment}', [KnowledgeImageController::class, 'show'])->name('knowledge.image');
     Route::get('/baza-wiedzy/{article}', KnowledgeShow::class)->name('knowledge.show');
     Route::get('/baza-wiedzy/{article}/edycja', KnowledgeForm::class)->name('knowledge.edit');
 

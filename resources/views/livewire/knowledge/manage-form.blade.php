@@ -146,7 +146,54 @@
                 </form>
             </div>
         </div>
+
+        {{-- Obrazy artykułu — tylko po zapisaniu artykułu (obraz przypina się do artykułu) --}}
+        <div class="card" style="margin-top:24px">
+            <div class="card__head">Obrazy artykułu ({{ $images->count() }})</div>
+            <div class="card__body stack" style="gap:12px">
+                <p class="muted" style="margin:0">
+                    Wgraj własne obrazy (zrzuty ekranu), a następnie skopiuj snippet i wklej w treść artykułu (HTML).
+                    Dozwolone: JPG, PNG, GIF, WEBP, BMP (max 4 MB).
+                </p>
+
+                @if (session('imageStatus'))
+                    <p class="muted" style="margin:0;color:var(--success,#16a34a)">{{ session('imageStatus') }}</p>
+                @endif
+
+                <div class="field field--full">
+                    <input type="file" wire:model="image" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp">
+                    <div wire:loading wire:target="image" class="hint">Wczytywanie pliku…</div>
+                    @error('image') <span class="error">{{ $message }}</span> @enderror
+                    <div style="margin-top:8px">
+                        <button type="button" class="btn btn--ghost btn--sm"
+                            wire:click="uploadImage"
+                            wire:loading.attr="disabled" wire:target="uploadImage,image">Wgraj</button>
+                    </div>
+                </div>
+
+                @forelse ($images as $img)
+                    <div class="list-row" x-data="{ snippet: '<img src=\'{{ route('knowledge.image', $img) }}\' alt=\'\'>' }">
+                        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+                            <img src="{{ route('knowledge.image', $img) }}" alt="" style="max-height:60px;border:1px solid var(--border,#e5e7eb);border-radius:4px">
+                            <input type="text" class="input" readonly
+                                value="&lt;img src=&quot;{{ route('knowledge.image', $img) }}&quot; alt=&quot;&quot;&gt;"
+                                style="flex:1;min-width:0;font-family:monospace;font-size:12px"
+                                onclick="this.select()">
+                        </div>
+                        <div style="display:flex;gap:8px">
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                x-on:click="navigator.clipboard.writeText(snippet)">Kopiuj</button>
+                            <button type="button" class="btn-link" style="color:var(--danger)"
+                                wire:click="removeImage({{ $img->id }})"
+                                wire:confirm="Usunąć ten obraz? Jeśli jest użyty w treści, przestanie się wyświetlać.">usuń</button>
+                        </div>
+                    </div>
+                @empty
+                    <p class="muted" style="margin:0">Brak wgranych obrazów.</p>
+                @endforelse
+            </div>
+        </div>
     @else
-        <p class="muted" style="margin-top:18px">Reguły widoczności dodasz po zapisaniu artykułu.</p>
+        <p class="muted" style="margin-top:18px">Reguły widoczności i obrazy dodasz po zapisaniu artykułu.</p>
     @endif
 </div>

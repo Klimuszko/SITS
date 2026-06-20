@@ -12,15 +12,22 @@ use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\HtmlSanitizer;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('layouts.app')]
 class ManageForm extends Component
 {
+    use WithFileUploads;
+
     public ?KnowledgeArticle $article = null;
+
+    // Wgrywany obraz artykułu (tylko po zapisaniu artykułu).
+    public $image = null;
 
     // Pola formularza artykułu.
     public string $title = '';
@@ -230,10 +237,71 @@ class ManageForm extends Component
         $this->article->refresh();
     }
 
+    /* ----------------------------- Obrazy artykułu ----------------------------- */
+
+    public function uploadImage(): void
+    {
+        // Fail-closed: obraz musi przypiąć się do UTRWALONEGO artykułu.
+        if (! $this->article) {
+            return;
+        }
+
+        $this->authorize('update', $this->article);
+
+        // RASTER ONLY — brak SVG (anty-XSS). Plik nigdy nie trafia na dysk publiczny.
+        $this->validate([
+            'image' => ['required', 'file', 'mimes:jpg,jpeg,png,gif,webp,bmp', 'max:4096'],
+        ]);
+
+        $ext = strtolower($this->image->getClientOriginalExtension());
+        // Losowa nazwa na dysku — bez nazwy klienta, więc brak path traversal.
+        $storedName = Str::random(40).'.'.$ext;
+        $path = $this->image->storeAs('kb-images/'.$this->article->id, $storedName, 'local');
+
+        $attachment = $this->article->attachments()->create([
+            'organization_id' => $this->article->organization_id ?? null,
+            'original_name' => $this->image->getClientOriginalName(),
+            'stored_name' => $storedName,
+            'path' => $path,
+            'mime_type' => $this->image->getMimeType(),
+            'size' => $this->image->getSize(),
+            'uploaded_by' => auth()->id(),
+        ]);
+
+        AuditLogger::log(AuditAction::AttachmentAdded, $attachment);
+
+        $this->image = null;
+        session()->flash('imageStatus', 'Wgrano obraz.');
+    }
+
+    public function removeImage(int $id): void
+    {
+        // Fail-closed: bez utrwalonego artykułu nie autoryzujemy.
+        if (! $this->article) {
+            return;
+        }
+
+        $this->authorize('update', $this->article);
+
+        $att = $this->article->attachments()->whereKey($id)->first();
+        if (! $att) {
+            return;
+        }
+
+        Storage::disk('local')->delete($att->path);
+        $att->forceDelete();
+
+        session()->flash('imageStatus', 'Usunięto obraz.');
+    }
+
     public function render()
     {
         $visibilities = $this->article
             ? $this->article->visibilities()->with(['organization', 'user'])->get()
+            : collect();
+
+        $images = $this->article
+            ? $this->article->attachments()->latest()->get()
             : collect();
 
         return view('livewire.knowledge.manage-form', [
@@ -241,6 +309,7 @@ class ManageForm extends Component
             'statuses' => PublicationStatus::options(),
             'roles' => Role::options(),
             'visibilities' => $visibilities,
+            'images' => $images,
             'organizations' => Organization::orderBy('name')->get(),
             'users' => User::orderBy('name')->get(),
         ]);
