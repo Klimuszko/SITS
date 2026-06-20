@@ -19,8 +19,8 @@ use Livewire\WithFileUploads;
  * i nadpisuje domyślny (komponent <x-icon> bierze najpierw override, potem default).
  *
  * BEZPIECZEŃSTWO: ikona jest inline'owana na KAŻDEJ stronie, więc SVG musi być czysty —
- * dlatego każdy upload przechodzi przez App\Support\SvgSanitizer (usuwa script/foreignObject/
- * on*/itd.). Dostęp: wyłącznie isAdminLevel (bramka access-admin), sprawdzana w każdej akcji.
+ * dlatego każdy upload przechodzi przez App\Support\SvgSanitizer (usuwa script, foreignObject,
+ * on-handlery itd.). Dostęp: wyłącznie isAdminLevel (bramka access-admin), sprawdzana w każdej akcji.
  */
 #[Layout('layouts.app')]
 #[Title('Ikony menu')]
