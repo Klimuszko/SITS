@@ -1,13 +1,12 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1>{{ $category->name }}</h1>
-            <p>Struktura, sekcje i pola kategorii zasobu <span class="muted">({{ $category->key }})</span>.</p>
-        </div>
-        <a href="{{ route('dictionaries.asset-categories') }}" wire:navigate class="btn btn--ghost btn--sm">
-            ← Wróć do kategorii
-        </a>
-    </div>
+    <x-page-header :title="$category->name">
+        <p>Struktura, sekcje i pola kategorii zasobu <span class="muted">({{ $category->key }})</span>.</p>
+        <x-slot:actions>
+            <a href="{{ route('dictionaries.asset-categories') }}" wire:navigate class="btn btn--ghost btn--sm">
+                ← Wróć do kategorii
+            </a>
+        </x-slot:actions>
+    </x-page-header>
 
     @if (session('status'))
         <div class="alert alert--success" style="margin-bottom:18px">{{ session('status') }}</div>
@@ -235,6 +234,7 @@
                 </div>
             </form>
 
+            <div class="table-wrap">
             <table class="table" style="margin-top:18px">
                 <thead>
                     <tr>
@@ -292,6 +292,7 @@
                 @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </div>
