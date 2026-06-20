@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Attachment;
 use App\Models\KnowledgeArticle;
+use App\Support\KbImageStorer;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -44,5 +47,32 @@ class KnowledgeImageController extends Controller
                 'Cache-Control' => 'private, max-age=3600',
             ]
         );
+    }
+
+    /**
+     * Upload obrazu z edytora TinyMCE (Krok 2b).
+     *
+     * TinyMCE (images_upload_handler) POST-uje plik tu, a oczekuje w odpowiedzi
+     * JSON { location: url } — wstawia ten URL jako <img src>. Zapis idzie przez
+     * TEN SAM helper co Livewire uploadImage (DRY): dysk prywatny, losowa nazwa,
+     * wiersz Attachment + audyt. Serwowanie obrazu nadal przez show() powyżej.
+     *
+     * BEZPIECZEŃSTWO: autoryzacja prawem update artykułu (jak edycja treści),
+     * walidacja RASTER ONLY (brak SVG — anty-XSS), max 4 MB. Sanityzacja samej
+     * treści HTML i tak następuje przy zapisie artykułu (HtmlSanitizer).
+     */
+    public function upload(Request $request, KnowledgeArticle $article): JsonResponse
+    {
+        $this->authorize('update', $article);
+
+        // RASTER ONLY — brak SVG (anty-XSS). Tożsame z Livewire uploadImage.
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:jpg,jpeg,png,gif,webp,bmp', 'max:4096'],
+        ]);
+
+        $attachment = app(KbImageStorer::class)->store($article, $request->file('file'));
+
+        // TinyMCE oczekuje { location: url } — wstawi go jako src obrazka.
+        return response()->json(['location' => route('knowledge.image', $attachment)]);
     }
 }

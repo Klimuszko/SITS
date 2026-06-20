@@ -167,6 +167,88 @@ class KnowledgeImageTest extends TestCase
             ->assertNotFound();
     }
 
+    /* ----------------- Krok 2b: endpoint HTTP uploadu dla TinyMCE ----------------- */
+
+    public function test_author_can_upload_image_via_http_endpoint_returns_location_and_stores(): void
+    {
+        Storage::fake('local');
+
+        $support = User::factory()->support()->create();
+        $article = KnowledgeArticle::factory()->authoredBy($support)->create();
+
+        $response = $this->actingAs($support)
+            ->postJson(route('knowledge.image.upload', $article), [
+                'file' => UploadedFile::fake()->image('shot.png'),
+            ]);
+
+        $response->assertOk();
+        // TinyMCE oczekuje { location: url } i wstawia ten URL jako src obrazka.
+        $location = $response->json('location');
+        $this->assertNotNull($location, 'Odpowiedź musi zawierać klucz location.');
+
+        $att = $article->attachments()->first();
+        $this->assertNotNull($att, 'Powinien powstać wiersz załącznika dla artykułu.');
+        $this->assertSame(KnowledgeArticle::class, $att->attachable_type);
+        $this->assertSame($support->id, $att->uploaded_by);
+        $this->assertSame(route('knowledge.image', $att), $location);
+        // Nazwa na dysku jest losowa, nie pochodzi od klienta.
+        $this->assertStringStartsWith('kb-images/'.$article->id.'/', $att->path);
+        $this->assertStringNotContainsString('shot', $att->stored_name);
+        Storage::disk('local')->assertExists($att->path);
+    }
+
+    public function test_non_author_client_cannot_upload_via_http_endpoint(): void
+    {
+        Storage::fake('local');
+
+        $support = User::factory()->support()->create();
+        $article = KnowledgeArticle::factory()->authoredBy($support)->create();
+
+        $client = User::factory()->create(); // rola User (klient) — brak prawa update
+
+        $this->actingAs($client)
+            ->postJson(route('knowledge.image.upload', $article), [
+                'file' => UploadedFile::fake()->image('shot.png'),
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(0, $article->attachments()->count());
+    }
+
+    public function test_non_image_is_rejected_by_http_endpoint(): void
+    {
+        Storage::fake('local');
+
+        $support = User::factory()->support()->create();
+        $article = KnowledgeArticle::factory()->authoredBy($support)->create();
+
+        $this->actingAs($support)
+            ->postJson(route('knowledge.image.upload', $article), [
+                'file' => UploadedFile::fake()->create('evil.php', 10),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('file');
+
+        $this->assertSame(0, $article->attachments()->count());
+    }
+
+    public function test_svg_is_rejected_by_http_endpoint_raster_only(): void
+    {
+        Storage::fake('local');
+
+        $support = User::factory()->support()->create();
+        $article = KnowledgeArticle::factory()->authoredBy($support)->create();
+
+        $this->actingAs($support)
+            ->postJson(route('knowledge.image.upload', $article), [
+                'file' => UploadedFile::fake()->create('logo.svg', 10, 'image/svg+xml'),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('file');
+
+        $this->assertSame(0, $article->attachments()->count());
+    }
+
     public function test_remove_image_deletes_file_and_row(): void
     {
         Storage::fake('local');

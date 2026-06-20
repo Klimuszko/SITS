@@ -11,6 +11,7 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\HtmlSanitizer;
+use App\Support\KbImageStorer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -253,22 +254,9 @@ class ManageForm extends Component
             'image' => ['required', 'file', 'mimes:jpg,jpeg,png,gif,webp,bmp', 'max:4096'],
         ]);
 
-        $ext = strtolower($this->image->getClientOriginalExtension());
-        // Losowa nazwa na dysku — bez nazwy klienta, więc brak path traversal.
-        $storedName = Str::random(40).'.'.$ext;
-        $path = $this->image->storeAs('kb-images/'.$this->article->id, $storedName, 'local');
-
-        $attachment = $this->article->attachments()->create([
-            'organization_id' => $this->article->organization_id ?? null,
-            'original_name' => $this->image->getClientOriginalName(),
-            'stored_name' => $storedName,
-            'path' => $path,
-            'mime_type' => $this->image->getMimeType(),
-            'size' => $this->image->getSize(),
-            'uploaded_by' => auth()->id(),
-        ]);
-
-        AuditLogger::log(AuditAction::AttachmentAdded, $attachment);
+        // Zapis przez wspólny helper (DRY z endpointem HTTP dla TinyMCE) — losowa nazwa,
+        // dysk prywatny, wiersz Attachment + wpis audytu. Walidacja powyżej została już wykonana.
+        app(KbImageStorer::class)->store($this->article, $this->image);
 
         $this->image = null;
         session()->flash('imageStatus', 'Wgrano obraz.');

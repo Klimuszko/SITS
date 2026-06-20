@@ -131,6 +131,9 @@ Route::middleware('auth')->group(function () {
     // Inline serwowanie obrazów artykułów (segment statyczny PRZED /{article}, żeby nie został
     // przechwycony jako parametr). Autoryzacja przez AttachmentPolicy::download → prawo view artykułu.
     Route::get('/baza-wiedzy/obraz/{attachment}', [KnowledgeImageController::class, 'show'])->name('knowledge.image');
+    // Upload obrazu z edytora TinyMCE (Krok 2b). POST → brak kolizji z trasami GET poniżej.
+    // Autoryzacja prawem update artykułu wewnątrz kontrolera; walidacja raster-only.
+    Route::post('/baza-wiedzy/{article}/obraz', [KnowledgeImageController::class, 'upload'])->name('knowledge.image.upload');
     Route::get('/baza-wiedzy/{article}', KnowledgeShow::class)->name('knowledge.show');
     Route::get('/baza-wiedzy/{article}/edycja', KnowledgeForm::class)->name('knowledge.edit');
 

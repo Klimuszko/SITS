@@ -50,7 +50,15 @@
                         <label for="body">Treść (HTML)
                             <span class="hint">— HTML zostanie automatycznie oczyszczony przy zapisie</span>
                         </label>
-                        <textarea id="body" class="textarea" rows="14" wire:model="body"></textarea>
+                        {{-- wire:ignore: Livewire NIGDY nie może przerysować/zniszczyć kontenera edytora,
+                             bo TinyMCE trzyma własny DOM nad textareą. Treść synchronizujemy ręcznie. --}}
+                        <div wire:ignore>
+                            {{-- TinyMCE czyta treść POCZĄTKOWĄ z textarea (renderowaną serwerowo: {{ $body }}).
+                                 Sync do Livewire idzie RĘCZNIE: @this.set('body', ...) w setup edytora oraz
+                                 przed zapisem. Pod wire:ignore wire:model byłby bezczynny (i nie zhydratyzowałby
+                                 treści przy edycji), dlatego go NIE używamy. --}}
+                            <textarea id="body" class="textarea" rows="14">{{ $body }}</textarea>
+                        </div>
                         @error('body') <span class="error">{{ $message }}</span> @enderror
                     </div>
                 </div>
@@ -58,7 +66,11 @@
         </div>
 
         <div style="margin-top:18px;display:flex;gap:10px">
-            <button type="submit" class="btn btn--primary" wire:loading.attr="disabled" wire:target="save">Zapisz</button>
+            {{-- Przed wysłaniem formularza wpisujemy AKTUALNĄ treść edytora do propy body
+                 (bez round-tripu — false), żeby save() po stronie serwera dostał świeży HTML. --}}
+            <button type="submit" class="btn btn--primary"
+                x-on:click="window.tinymce && tinymce.get('body') && $wire.set('body', tinymce.get('body').getContent(), false)"
+                wire:loading.attr="disabled" wire:target="save">Zapisz</button>
             <a href="{{ route('knowledge.index') }}" wire:navigate class="btn btn--ghost">Anuluj</a>
         </div>
     </form>
@@ -196,4 +208,76 @@
     @else
         <p class="muted" style="margin-top:18px">Reguły widoczności i obrazy dodasz po zapisaniu artykułu.</p>
     @endif
+
+    {{-- ===================== Edytor WYSIWYG (Krok 2b) ===================== --}}
+    {{-- TinyMCE 7 community (GPL, bez klucza API) z CDN. Ładowany TYLKO na tej stronie.
+         Bezpieczeństwo treści (XSS) jest po stronie serwera (HtmlSanitizer przy zapisie) —
+         edytor NIE jest granicą bezpieczeństwa, dlatego celowo nie okrawamy HTML-a (valid_elements:'*[*]',
+         verify_html:false), żeby wklejony HTML z GLPI (flex/grid/inline-style) przetrwał. --}}
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        function initKbEditor() {
+            // TinyMCE może jeszcze nie być załadowany (CDN) — wtedy próbujemy ponownie po onload skryptu.
+            if (typeof tinymce === 'undefined') {
+                return;
+            }
+
+            // Usuwamy ewentualną poprzednią instancję (np. po wire:navigate), żeby nie podwoić edytora.
+            tinymce.remove('#body');
+
+            tinymce.init({
+                selector: '#body',
+                license_key: 'gpl',
+                promotion: false,
+                branding: false,
+                menubar: false,
+                height: 520,
+                plugins: 'code link lists table autolink image',
+                toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image table | code',
+                // CRUCIAL: nie przepisuj/okrawaj HTML — wklejony HTML z GLPI musi przetrwać 1:1.
+                // Granica bezpieczeństwa jest serwerowa (HtmlSanitizer przy zapisie artykułu).
+                valid_elements: '*[*]',
+                extended_valid_elements: '*[*]',
+                verify_html: false,
+                convert_urls: false,
+                entity_encoding: 'raw',
+                @if ($article)
+                // Upload obrazu działa tylko dla zapisanego artykułu (endpoint potrzebuje {article}).
+                images_upload_handler: function (blobInfo) {
+                    return new Promise(function (resolve, reject) {
+                        var fd = new FormData();
+                        fd.append('file', blobInfo.blob(), blobInfo.filename());
+                        fetch('{{ route('knowledge.image.upload', $article) }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                'Accept': 'application/json',
+                            },
+                            body: fd,
+                        })
+                            .then(function (r) { return r.json(); })
+                            .then(function (d) { d.location ? resolve(d.location) : reject('Upload failed'); })
+                            .catch(function () { reject('Upload failed'); });
+                    });
+                },
+                @endif
+                setup: function (editor) {
+                    // Synchronizacja treści edytora do propy Livewire BEZ round-tripu (false).
+                    editor.on('Change KeyUp Undo Redo', function () {
+                        @this.set('body', editor.getContent(), false);
+                    });
+                },
+            });
+        }
+
+        // Inicjalizacja: po pełnym załadowaniu strony oraz po nawigacji Livewire (wire:navigate).
+        document.addEventListener('livewire:navigated', initKbEditor);
+        if (typeof tinymce !== 'undefined') {
+            initKbEditor();
+        } else {
+            // Skrypt CDN mógł się jeszcze nie wykonać — odpal init po jego załadowaniu.
+            document.addEventListener('DOMContentLoaded', initKbEditor);
+            window.addEventListener('load', initKbEditor);
+        }
+    </script>
 </div>
