@@ -17,13 +17,9 @@
                         @error('title') <span class="error">{{ $message }}</span> @enderror
                     </div>
 
-                    <div class="field">
-                        <label for="slug">Odnośnik (slug)
-                            <span class="hint">— zostaw puste, aby wygenerować z tytułu</span>
-                        </label>
-                        <input id="slug" class="input" wire:model="slug">
-                        @error('slug') <span class="error">{{ $message }}</span> @enderror
-                    </div>
+                    {{-- Slug (odnośnik) jest generowany automatycznie z tytułu przy zapisie
+                         (unikalny, sufiks -2, -3, …) i celowo UKRYTY — to klucz techniczny,
+                         routing i tak używa id artykułu. --}}
 
                     <div class="field">
                         <label for="knowledge_category_id">Kategoria</label>
@@ -231,6 +227,8 @@
                 promotion: false,
                 branding: false,
                 menubar: false,
+                // Pasek ścieżki elementu na dole („div › div › div") — zbędny, wyłączamy.
+                elementpath: false,
                 height: 520,
                 plugins: 'code link lists table autolink image',
                 toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image table | code',
