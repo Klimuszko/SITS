@@ -85,7 +85,7 @@ Model ról jest **dwupoziomowy**:
 - `users.role` (`App\Enums\Role`) – globalna klasyfikacja konta.
 - `organization_memberships.role` (`App\Enums\OrgRole`) – autorytatywna rola klienta *per organizacja* (ta sama osoba może być managerem w jednej firmie, a userem w innej).
 
-Bezpieczeństwo (§30): separacja danych per organizacja w Policies (`app/Policies`), pobieranie załączników **wyłącznie** przez kontroler z autoryzacją (`AttachmentController` + `AttachmentPolicy`), sanityzacja HTML bazy wiedzy (HTMLPurifier, profil `kb` w `config/purifier.php`), CSRF, rate limiting logowania, walidacja formularzy.
+Bezpieczeństwo (§30): separacja danych per organizacja w Policies (`app/Policies`), pobieranie załączników **wyłącznie** przez kontroler z autoryzacją (`AttachmentController` + `AttachmentPolicy`), sanityzacja HTML bazy wiedzy (własny `App\Services\HtmlSanitizer` — bogaty HTML, usuwane skrypty/handlery; SVG przez `App\Support\SvgSanitizer`), CSRF, rate limiting logowania, walidacja formularzy.
 
 ---
 
@@ -145,7 +145,7 @@ app/
   Http/         # Middleware (role), AttachmentController
   Livewire/     # Auth\Login, Dashboard, Organizations\{Index, ManageForm}
   Providers/    # AppServiceProvider, AuthServiceProvider (policies + gates)
-config/         # app, database, cache, queue, session, filesystems, auth, purifier...
+config/         # app, database, cache, queue, session, filesystems, auth...
 database/
   migrations/   # pełny schemat (§32)
   seeders/      # Super Admin (z .env), słowniki, dane demo PAKO Engineering (PL)
