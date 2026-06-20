@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -87,6 +88,31 @@ class Index extends Component
         ];
     }
 
+    /**
+     * Pliki archiwum audytu (audit-RRRR-MM.log) na dysku prywatnym — do pobrania.
+     *
+     * @return list<array{name:string,size:int,modified:int}>
+     */
+    protected function archiveFiles(): array
+    {
+        $disk = Storage::disk('local');
+
+        if (! $disk->exists('audit-archive')) {
+            return [];
+        }
+
+        return collect($disk->files('audit-archive'))
+            ->filter(fn ($p) => str_ends_with($p, '.log'))
+            ->sortDesc()
+            ->map(fn ($p) => [
+                'name' => basename($p),
+                'size' => $disk->size($p),
+                'modified' => $disk->lastModified($p),
+            ])
+            ->values()
+            ->all();
+    }
+
     public function render()
     {
         $query = AuditLog::query()->with('user');
@@ -122,6 +148,7 @@ class Index extends Component
             'users' => User::orderBy('name')->get(['id', 'name']),
             'subjectTypes' => $this->subjectTypeOptions(),
             'retentionOptions' => $this->retentionOptions(),
+            'archiveFiles' => $this->archiveFiles(),
         ]);
     }
 

@@ -22,6 +22,21 @@
         </div>
     </div>
 
+    @if (count($archiveFiles))
+        <div class="card" style="margin-bottom:18px">
+            <div class="card__head">Archiwum audytu ({{ count($archiveFiles) }})</div>
+            <div class="card__body stack" style="gap:8px">
+                <p class="muted" style="margin:0">Starsze wpisy zarchiwizowane do plików (JSON-lines) przed usunięciem z bazy. Pobierz, by przejrzeć poza aplikacją.</p>
+                @foreach ($archiveFiles as $f)
+                    <div class="list-row">
+                        <a href="{{ route('audit.archive.download', $f['name']) }}">{{ $f['name'] }}</a>
+                        <span class="muted" style="font-size:12px">{{ number_format($f['size'] / 1024, 1) }} KB · {{ \Carbon\Carbon::createFromTimestamp($f['modified'])->format('Y-m-d') }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <div class="toolbar">
         <select class="select" wire:model.live="action">
             <option value="">Każda akcja</option>

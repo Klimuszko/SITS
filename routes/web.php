@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\AuditArchiveController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\HomeController;
@@ -140,6 +141,7 @@ Route::middleware('auth')->group(function () {
 
     // Audyt (tylko do odczytu, admin). Autoryzacja w mount() przez bramkę view-audit.
     Route::get('/audyt', AuditIndex::class)->name('audit.index');
+    Route::get('/audyt/archiwum/{file}', [AuditArchiveController::class, 'download'])->name('audit.archive.download');
 
     // Ustawienia brandingu + ikon menu (admin). Autoryzacja w mount() przez bramkę access-admin.
     Route::get('/ustawienia/branding', SettingsBranding::class)->name('settings.branding');
