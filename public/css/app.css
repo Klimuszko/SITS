@@ -301,6 +301,11 @@ html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180de
 @media (max-width: 1000px) { .grid--4 { grid-template-columns: repeat(2, 1fr); } .grid--3, .grid--2 { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .grid--4 { grid-template-columns: 1fr; } }
 
+/* Układ widoków szczegółów: główna kolumna + boczny panel (akcje/status/załączniki).
+   Składa się do jednej kolumny na węższych ekranach. */
+.detail-grid { display: grid; grid-template-columns: 1fr 330px; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
 .card__body { padding: 18px 20px; }
 .card__head { padding: 14px 20px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }

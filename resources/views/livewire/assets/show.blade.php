@@ -1,23 +1,23 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                {{ $asset->name }}
-                <span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span>
-                @if ($asset->is_private)
-                    <span class="badge badge--slate">prywatny</span>
-                @endif
-            </h1>
-            <p>{{ $asset->category?->name ?? '—' }} · {{ $asset->organization?->name }} · utworzono {{ $asset->created_at->format('Y-m-d H:i') }}</p>
-        </div>
-        <a href="{{ route('assets.index') }}" wire:navigate class="btn btn--ghost">← Lista</a>
-    </div>
+    <x-page-header>
+        <h1 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            {{ $asset->name }}
+            <span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span>
+            @if ($asset->is_private)
+                <span class="badge badge--slate">prywatny</span>
+            @endif
+        </h1>
+        <p>{{ $asset->category?->name ?? '—' }} · {{ $asset->organization?->name }} · utworzono {{ $asset->created_at->format('Y-m-d H:i') }}</p>
+        <x-slot:actions>
+            <a href="{{ route('assets.index') }}" wire:navigate class="btn btn--ghost">← Lista</a>
+        </x-slot:actions>
+    </x-page-header>
 
     @if (session('status'))
         <div class="alert alert--success">{{ session('status') }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:1fr 330px;gap:18px;align-items:start">
+    <div class="detail-grid">
         {{-- ----------------------------- KOLUMNA GŁÓWNA ----------------------------- --}}
         <div class="stack" style="gap:18px">
             {{-- Dane podstawowe --}}

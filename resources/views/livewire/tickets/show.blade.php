@@ -1,21 +1,21 @@
 <div>
-    <div class="page-head">
-        <div>
-            <h1 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                <span class="muted" style="font-size:18px">{{ $ticket->number }}</span>
-                {{ $ticket->title }}
-                <span class="badge badge--{{ $ticket->status->color() }}">{{ $ticket->status->label() }}</span>
-            </h1>
-            <p>Zgłaszający: {{ $ticket->requester?->name }} · {{ $ticket->organization?->name }} · utworzono {{ $ticket->created_at->format('Y-m-d H:i') }}</p>
-        </div>
-        <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn--ghost">← Lista</a>
-    </div>
+    <x-page-header>
+        <h1 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="muted" style="font-size:18px">{{ $ticket->number }}</span>
+            {{ $ticket->title }}
+            <span class="badge badge--{{ $ticket->status->color() }}">{{ $ticket->status->label() }}</span>
+        </h1>
+        <p>Zgłaszający: {{ $ticket->requester?->name }} · {{ $ticket->organization?->name }} · utworzono {{ $ticket->created_at->format('Y-m-d H:i') }}</p>
+        <x-slot:actions>
+            <a href="{{ route('tickets.index') }}" wire:navigate class="btn btn--ghost">← Lista</a>
+        </x-slot:actions>
+    </x-page-header>
 
     @if (session('status'))
         <div class="alert alert--success">{{ session('status') }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:1fr 330px;gap:18px;align-items:start">
+    <div class="detail-grid">
         {{-- ----------------------------- KOLUMNA GŁÓWNA ----------------------------- --}}
         <div class="stack" style="gap:18px">
             {{-- Opis --}}
