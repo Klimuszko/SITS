@@ -6,6 +6,27 @@
         </div>
     </div>
 
+    @if (session('status'))
+        <div class="alert alert--success" style="margin-bottom:18px">{{ session('status') }}</div>
+    @endif
+
+    <div class="card" style="margin-bottom:18px">
+        <div class="card__body" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+            <div class="field" style="margin:0">
+                <label for="retentionDays">Przechowywanie audytu
+                    <span class="hint">— starsze wpisy są codziennie archiwizowane do pliku i usuwane z bazy</span>
+                </label>
+                <select id="retentionDays" class="select" wire:model="retentionDays" style="min-width:220px">
+                    @foreach ($retentionOptions as $days => $label)
+                        <option value="{{ $days }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('retentionDays') <span class="error">{{ $message }}</span> @enderror
+            </div>
+            <button type="button" class="btn btn--ghost" wire:click="saveRetention" wire:loading.attr="disabled" wire:target="saveRetention">Zapisz</button>
+        </div>
+    </div>
+
     <div class="toolbar">
         <select class="select" wire:model.live="action">
             <option value="">Każda akcja</option>

@@ -4,6 +4,7 @@ namespace App\Livewire\Audit;
 
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
@@ -36,9 +37,13 @@ class Index extends Component
     /** Rozwinięty wiersz (szczegóły old/new values). Tylko stan UI — bez zapisu. */
     public ?int $expandedId = null;
 
+    /** Retencja audytu w dniach (0 = bez limitu). Codzienny audit:prune usuwa starsze. */
+    public int $retentionDays = 365;
+
     public function mount(): void
     {
         $this->authorize('view-audit');
+        $this->retentionDays = (int) Setting::get('audit_retention_days', 365);
     }
 
     public function updating($name): void
@@ -53,6 +58,33 @@ class Index extends Component
     public function toggle(int $id): void
     {
         $this->expandedId = $this->expandedId === $id ? null : $id;
+    }
+
+    /** Zapis okresu retencji (admin). Codzienny audit:prune archiwizuje i usuwa starsze wpisy. */
+    public function saveRetention(): void
+    {
+        $this->authorize('access-admin');
+
+        $this->validate([
+            'retentionDays' => ['required', 'integer', 'in:'.implode(',', array_keys($this->retentionOptions()))],
+        ]);
+
+        Setting::set('audit_retention_days', (string) $this->retentionDays);
+        session()->flash('status', 'Zapisano okres przechowywania audytu.');
+    }
+
+    /** @return array<int,string> dni⇒etykieta */
+    protected function retentionOptions(): array
+    {
+        return [
+            0 => 'Bez limitu',
+            7 => 'Tydzień',
+            30 => 'Miesiąc',
+            90 => 'Kwartał (3 mies.)',
+            365 => 'Rok',
+            730 => '2 lata',
+            1825 => '5 lat',
+        ];
     }
 
     public function render()
@@ -89,6 +121,7 @@ class Index extends Component
             'actions' => $this->actionOptions(),
             'users' => User::orderBy('name')->get(['id', 'name']),
             'subjectTypes' => $this->subjectTypeOptions(),
+            'retentionOptions' => $this->retentionOptions(),
         ]);
     }
 

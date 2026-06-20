@@ -10,3 +10,7 @@ use Illuminate\Support\Facades\Schedule;
  */
 
 // Schedule::command('tickets:close-stale')->dailyAt('02:00');
+
+// Audyt: codzienne archiwizowanie i przycinanie wpisów starszych niż okres retencji
+// (Setting audit_retention_days; 0 = bez limitu → no-op). Trzyma tabelę audytu w ryzach.
+Schedule::command('audit:prune')->dailyAt('03:00');
