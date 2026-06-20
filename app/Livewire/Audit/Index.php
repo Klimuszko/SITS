@@ -5,6 +5,7 @@ namespace App\Livewire\Audit;
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -78,7 +79,10 @@ class Index extends Component
             $query->whereDate('created_at', '<=', $this->dateTo);
         }
 
-        $logs = $query->latest('created_at')->latest('id')->paginate(25);
+        // simplePaginate NIE wykonuje SELECT count(*) — na dużej tabeli audytu pełny count
+        // w Postgresie to skan, który potrafił zablokować wczytanie strony. Sortowanie po
+        // created_at jest indeksowane, więc LIMIT 26 jest szybki niezależnie od rozmiaru.
+        $logs = $query->latest('created_at')->latest('id')->simplePaginate(25);
 
         return view('livewire.audit.index', [
             'logs' => $logs,
@@ -103,11 +107,15 @@ class Index extends Component
     /** Wyłącznie wartości subject_type faktycznie obecne w tabeli (distinct). */
     protected function subjectTypeOptions(): array
     {
-        return AuditLog::query()
-            ->whereNotNull('subject_type')
-            ->distinct()
-            ->orderBy('subject_type')
-            ->pluck('subject_type')
-            ->all();
+        // DISTINCT po całej tabeli jest kosztowny przy każdym renderze — cache na 10 min.
+        // Nowe typy obiektów pojawiają się rzadko, więc lekka nieaktualność filtra jest OK.
+        return Cache::remember('audit.subject_types', now()->addMinutes(10), function () {
+            return AuditLog::query()
+                ->whereNotNull('subject_type')
+                ->distinct()
+                ->orderBy('subject_type')
+                ->pluck('subject_type')
+                ->all();
+        });
     }
 }
