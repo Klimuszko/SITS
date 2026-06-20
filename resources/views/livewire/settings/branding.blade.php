@@ -8,6 +8,13 @@
     <form wire:submit="save" enctype="multipart/form-data">
         <x-section title="Marka i motyw" description="Jak prezentowana jest marka w pasku górnym oraz jaki motyw widzi nowy użytkownik." card>
             <div class="form-grid">
+                <div class="field field--full">
+                    <label for="appName">Nazwa strony / aplikacji</label>
+                    <input id="appName" class="input" wire:model="appName" maxlength="255">
+                    <span class="hint">Tytuł karty przeglądarki: „{{ $appName ?: 'Nazwa' }} – Sekcja"; również nazwa marki w pasku górnym.</span>
+                    @error('appName') <span class="error">{{ $message }}</span> @enderror
+                </div>
+
                 <div class="field">
                     <label for="brandingMode">Tryb marki</label>
                     <select id="brandingMode" class="select" wire:model="brandingMode">

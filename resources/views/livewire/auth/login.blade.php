@@ -1,10 +1,12 @@
 <div class="auth-card">
     @php ($logoUrl = \App\Models\Setting::get('logo_path') ? route('branding.logo').'?v='.\App\Models\Setting::get('branding_version') : null)
+    @php ($appName = \App\Models\Setting::get('app_name', config('app.name', 'Smart Solutions')))
     <div class="auth-logo">
         @if ($logoUrl)
-            <img src="{{ $logoUrl }}" alt="Smart Solutions — Portal IT">
+            <img src="{{ $logoUrl }}" alt="{{ $appName }}">
         @else
-            <span class="brand"><span class="brand__mark">Smart</span><span class="brand__accent">Solutions</span></span>
+            @php ($brandParts = explode(' ', $appName, 2))
+            <span class="brand"><span class="brand__mark">{{ $brandParts[0] }}</span>@if (isset($brandParts[1]))<span class="brand__accent">{{ $brandParts[1] }}</span>@endif</span>
         @endif
     </div>
     <h1>Logowanie</h1>

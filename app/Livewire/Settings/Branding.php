@@ -29,6 +29,7 @@ class Branding extends Component
 
     public string $brandingMode = 'name';
     public string $defaultTheme = 'dark';
+    public string $appName = '';
 
     /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
     public $logo = null;
@@ -42,11 +43,13 @@ class Branding extends Component
 
         $this->brandingMode = (string) Setting::get('branding_mode', 'name');
         $this->defaultTheme = (string) Setting::get('default_theme', 'dark');
+        $this->appName = (string) Setting::get('app_name', config('app.name', 'Smart Solutions'));
     }
 
     protected function rules(): array
     {
         return [
+            'appName' => ['required', 'string', 'max:255'],
             'brandingMode' => ['required', 'in:name,name_logo,logo'],
             'defaultTheme' => ['required', 'in:dark,light'],
             'logo' => ['nullable', 'file', 'mimes:svg,png,jpg,jpeg', 'max:1024'],
@@ -79,6 +82,7 @@ class Branding extends Component
             $this->favicon = null;
         }
 
+        Setting::set('app_name', $this->appName);
         Setting::set('branding_mode', $this->brandingMode);
         Setting::set('default_theme', $this->defaultTheme);
 

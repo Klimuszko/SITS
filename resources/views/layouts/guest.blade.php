@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? config('app.name', 'Smart Solutions') }}</title>
+    @php ($appName = \App\Models\Setting::get('app_name', config('app.name', 'Smart Solutions')))
+    <title>{{ $appName }}{{ ($title ?? '') !== '' ? ' – '.$title : '' }}</title>
     <link rel="icon" href="{{ \App\Models\Setting::get('favicon_path') ? route('branding.favicon').'?v='.\App\Models\Setting::get('branding_version') : asset('favicon.ico') }}" sizes="any">
     <script>
         // Domyślny motyw konfigurowalny przez admina; jawny wybór użytkownika w localStorage wygrywa.

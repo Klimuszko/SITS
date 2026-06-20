@@ -30,6 +30,24 @@ class BrandingSettingsTest extends TestCase
         $this->assertSame('light', Setting::get('default_theme'));
     }
 
+    public function test_app_name_persists_and_appears_in_page_title(): void
+    {
+        Storage::fake('local');
+        $this->actingAs(\App\Models\User::factory()->admin()->create());
+
+        Livewire::test(Branding::class)
+            ->set('appName', 'Smart Integracje')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('Smart Integracje', Setting::get('app_name'));
+
+        // Tytuł karty wg wzorca „Nazwa – Sekcja".
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('<title>Smart Integracje', false);
+    }
+
     public function test_non_admin_cannot_access_branding(): void
     {
         $this->actingAs(\App\Models\User::factory()->create());

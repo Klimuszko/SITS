@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? config('app.name', 'Smart Solutions') }}</title>
+    @php ($appName = \App\Models\Setting::get('app_name', config('app.name', 'Smart Solutions')))
+    <title>{{ $appName }}{{ ($title ?? '') !== '' ? ' – '.$title : '' }}</title>
     <link rel="icon" href="{{ \App\Models\Setting::get('favicon_path') ? route('branding.favicon').'?v='.\App\Models\Setting::get('branding_version') : asset('favicon.ico') }}" sizes="any">
     <script>
         // Motyw trzymany w localStorage. Domyślny motyw aplikacji jest konfigurowalny
@@ -61,11 +62,12 @@
 
             @php ($brandingMode = \App\Models\Setting::get('branding_mode', 'name'))
             @php ($logoUrl = \App\Models\Setting::get('logo_path') ? route('branding.logo').'?v='.\App\Models\Setting::get('branding_version') : null)
-            <a href="{{ route('dashboard') }}" wire:navigate class="brand" aria-label="Smart Solutions — Portal IT">
+            <a href="{{ route('dashboard') }}" wire:navigate class="brand" aria-label="{{ $appName }}">
                 @if ($brandingMode === 'logo' && $logoUrl)
                     <img class="brand__logo brand__logo--solo" src="{{ $logoUrl }}" alt="Logo">
                 @else
-                    <span class="brand__mark">Smart</span><span class="brand__accent">Solutions</span>
+                    @php ($brandParts = explode(' ', $appName, 2))
+                    <span class="brand__mark">{{ $brandParts[0] }}</span>@if (isset($brandParts[1]))<span class="brand__accent">{{ $brandParts[1] }}</span>@endif
                     @if ($brandingMode === 'name_logo' && $logoUrl)
                         <img class="brand__logo" src="{{ $logoUrl }}" alt="Logo">
                     @endif
