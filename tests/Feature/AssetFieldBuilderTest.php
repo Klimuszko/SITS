@@ -55,6 +55,38 @@ class AssetFieldBuilderTest extends TestCase
         $this->assertTrue($field->is_active);
     }
 
+    public function test_field_key_is_auto_generated_from_name(): void
+    {
+        // Klucz pola ukryty w UI — generowany z nazwy. Bez set('fieldKey').
+        Livewire::test(Builder::class, ['assetCategory' => $this->category])
+            ->set('fieldName', 'Adres IP')
+            ->set('fieldType', AssetFieldType::Text->value)
+            ->call('saveField')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('asset_fields', [
+            'asset_category_id' => $this->category->id,
+            'name' => 'Adres IP',
+            'key' => 'adres-ip',
+        ]);
+    }
+
+    public function test_field_auto_key_gets_unique_suffix_on_collision(): void
+    {
+        AssetField::factory()->forCategory($this->category)->create(['key' => 'adres-ip']);
+
+        Livewire::test(Builder::class, ['assetCategory' => $this->category])
+            ->set('fieldName', 'Adres IP')
+            ->set('fieldType', AssetFieldType::Text->value)
+            ->call('saveField')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('asset_fields', [
+            'asset_category_id' => $this->category->id,
+            'key' => 'adres-ip-2',
+        ]);
+    }
+
     public function test_select_requires_options(): void
     {
         Livewire::test(Builder::class, ['assetCategory' => $this->category])

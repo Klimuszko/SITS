@@ -38,12 +38,6 @@
                         @error('sectionName') <span class="error">{{ $message }}</span> @enderror
                     </div>
 
-                    <div class="field">
-                        <label for="sectionKey">Klucz *</label>
-                        <input id="sectionKey" class="input" wire:model="sectionKey">
-                        @error('sectionKey') <span class="error">{{ $message }}</span> @enderror
-                    </div>
-
                     @if ($sectionKind !== $kindSection)
                         <div class="field">
                             <label for="sectionParentId">Węzeł nadrzędny *</label>
@@ -157,11 +151,6 @@
                         @error('fieldName') <span class="error">{{ $message }}</span> @enderror
                     </div>
                     <div class="field">
-                        <label for="fieldKey">Klucz *</label>
-                        <input id="fieldKey" class="input" wire:model="fieldKey">
-                        @error('fieldKey') <span class="error">{{ $message }}</span> @enderror
-                    </div>
-                    <div class="field">
                         <label for="fieldType">Typ *</label>
                         <select id="fieldType" class="select" wire:model.live="fieldType">
                             @foreach ($fieldTypes as $value => $label)
@@ -240,7 +229,6 @@
                     <tr>
                         <th>Kolejność</th>
                         <th>Nazwa</th>
-                        <th>Klucz</th>
                         <th>Typ</th>
                         <th>Węzeł</th>
                         <th>Wymagane</th>
@@ -253,7 +241,6 @@
                     <tr>
                         <td class="muted">{{ $field->order }}</td>
                         <td><strong>{{ $field->name }}</strong></td>
-                        <td class="muted">{{ $field->key }}</td>
                         <td>{{ $field->type->label() }}</td>
                         <td class="muted">{{ $field->section?->name ?? '—' }}</td>
                         <td>{{ $field->is_required ? 'Tak' : 'Nie' }}</td>
@@ -288,7 +275,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="table__empty">Brak pól.</td></tr>
+                    <tr><td colspan="7" class="table__empty">Brak pól.</td></tr>
                 @endforelse
                 </tbody>
             </table>

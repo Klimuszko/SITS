@@ -9,6 +9,7 @@ use App\Models\AssetField;
 use App\Models\AssetSection;
 use App\Services\AuditLogger;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -176,6 +177,12 @@ class Builder extends Component
     {
         $this->authorize('manage-categories');
 
+        // Klucz techniczny generujemy z nazwy (ukryty w UI). Tylko przy tworzeniu —
+        // przy edycji klucz zostaje stabilny, bo identyfikuje węzeł w seederach i strukturze.
+        if (blank($this->sectionKey) && filled($this->sectionName)) {
+            $this->sectionKey = $this->uniqueSectionKey(Str::slug($this->sectionName));
+        }
+
         $data = $this->validate($this->sectionRules(), $this->sectionMessages(), [
             'sectionKind' => 'rodzaj węzła',
             'sectionName' => 'nazwa węzła',
@@ -321,6 +328,29 @@ class Builder extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Unikalny klucz węzła w obrębie kategorii (auto-generowany z nazwy). Pusty
+     * slug (nazwa bez znaków alfanumerycznych) → fallback „sekcja". Sufiks -2/-3
+     * przy kolizji; przy edycji pomija bieżący węzeł.
+     */
+    protected function uniqueSectionKey(string $base): string
+    {
+        $base = $base !== '' ? $base : 'sekcja';
+        $key = $base;
+        $n = 1;
+
+        while (
+            AssetSection::where('asset_category_id', $this->assetCategory->id)
+                ->where('key', $key)
+                ->when($this->editingSectionId, fn ($q) => $q->whereKeyNot($this->editingSectionId))
+                ->exists()
+        ) {
+            $key = $base.'-'.(++$n);
+        }
+
+        return $key;
+    }
+
     /** Klasyfikacja zapisanego węzła do jednego z trzech rodzajów. */
     protected function kindOf(AssetSection $section): string
     {
@@ -441,6 +471,12 @@ class Builder extends Component
     {
         $this->authorize('manage-categories');
 
+        // Klucz techniczny generujemy z nazwy (ukryty w UI). Tylko przy tworzeniu —
+        // przy edycji klucz zostaje stabilny, bo identyfikuje pole w historii audytu zasobu.
+        if (blank($this->fieldKey) && filled($this->fieldName)) {
+            $this->fieldKey = $this->uniqueFieldKey(Str::slug($this->fieldName));
+        }
+
         $data = $this->validate($this->fieldRules(), $this->fieldMessages(), [
             'fieldName' => 'nazwa pola',
             'fieldKey' => 'klucz pola',
@@ -546,6 +582,29 @@ class Builder extends Component
         ]);
         $this->fieldType = AssetFieldType::Text->value;
         $this->resetValidation();
+    }
+
+    /**
+     * Unikalny klucz pola w obrębie kategorii (auto-generowany z nazwy). Pusty
+     * slug → fallback „pole". Sufiks -2/-3 przy kolizji; przy edycji pomija
+     * bieżące pole (klucz pola jest identyfikatorem w historii audytu).
+     */
+    protected function uniqueFieldKey(string $base): string
+    {
+        $base = $base !== '' ? $base : 'pole';
+        $key = $base;
+        $n = 1;
+
+        while (
+            AssetField::where('asset_category_id', $this->assetCategory->id)
+                ->where('key', $key)
+                ->when($this->editingFieldId, fn ($q) => $q->whereKeyNot($this->editingFieldId))
+                ->exists()
+        ) {
+            $key = $base.'-'.(++$n);
+        }
+
+        return $key;
     }
 
     /** Aktywne węzły kategorii — do selecta rodzica i przypisania pola. */

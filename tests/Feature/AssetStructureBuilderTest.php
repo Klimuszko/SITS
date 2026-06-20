@@ -50,6 +50,39 @@ class AssetStructureBuilderTest extends TestCase
         ]);
     }
 
+    public function test_section_key_is_auto_generated_from_name(): void
+    {
+        // Klucz ukryty w UI — generowany z nazwy. Bez set('sectionKey').
+        Livewire::test(Builder::class, ['assetCategory' => $this->category])
+            ->set('sectionKind', Builder::KIND_SECTION)
+            ->set('sectionName', 'Sieć LAN')
+            ->call('saveSection')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('asset_sections', [
+            'asset_category_id' => $this->category->id,
+            'name' => 'Sieć LAN',
+            'key' => 'siec-lan',
+        ]);
+    }
+
+    public function test_section_auto_key_gets_unique_suffix_on_collision(): void
+    {
+        AssetSection::factory()->forCategory($this->category)->create(['key' => 'siec']);
+
+        Livewire::test(Builder::class, ['assetCategory' => $this->category])
+            ->set('sectionKind', Builder::KIND_SECTION)
+            ->set('sectionName', 'Sieć')
+            ->call('saveSection')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('asset_sections', [
+            'asset_category_id' => $this->category->id,
+            'name' => 'Sieć',
+            'key' => 'siec-2',
+        ]);
+    }
+
     public function test_admin_adds_nested_repeatable_group_with_ticket_config(): void
     {
         $section = AssetSection::factory()->forCategory($this->category)->create();
