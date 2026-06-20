@@ -1,6 +1,11 @@
 <div class="auth-card">
+    @php ($logoUrl = \App\Models\Setting::get('logo_path') ? route('branding.logo').'?v='.\App\Models\Setting::get('branding_version') : null)
     <div class="auth-logo">
-        <img src="{{ asset('img/logo-wordmark.png') }}" alt="Smart Solutions — Portal IT">
+        @if ($logoUrl)
+            <img src="{{ $logoUrl }}" alt="Smart Solutions — Portal IT">
+        @else
+            <span class="brand"><span class="brand__mark">Smart</span><span class="brand__accent">Solutions</span></span>
+        @endif
     </div>
     <h1>Logowanie</h1>
     <p class="muted" style="margin-top:0">Zaloguj się do portalu obsługi IT.</p>

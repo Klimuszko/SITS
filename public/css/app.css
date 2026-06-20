@@ -130,8 +130,11 @@ a:hover { text-decoration: underline; }
     border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 32px;
 }
 .auth-card h1 { margin: 0 0 4px; font-size: 22px; }
-.auth-logo { margin-bottom: 18px; }
-.auth-logo img { display: block; width: 100%; height: auto; border-radius: var(--radius-sm); }
+.auth-logo { margin-bottom: 18px; text-align: center; }
+/* Logo skalowane do rozsądnej wysokości i wyśrodkowane — bez rozciągania na całą
+   szerokość (to tworzyło „baner" z tłem). Działa dla dowolnego wgranego logo. */
+.auth-logo img { max-height: 56px; max-width: 100%; width: auto; height: auto; display: inline-block; }
+.auth-logo .brand { font-size: 28px; }
 
 /* ------------------------------ App shell ------------------------------ */
 .app { min-height: 100vh; display: flex; flex-direction: column; }
