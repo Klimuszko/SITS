@@ -16,7 +16,7 @@ use App\Models\User;
 final class Navigation
 {
     /**
-     * @return list<array{key:string,label:?string,icon:?string,items:list<array{label:string,route:string,active:string,icon:string}>}>
+     * @return list<array{key:string,label:?string,icon:?string,items:list<array{label:string,route:string,active:string|list<string>,icon:string}>}>
      */
     public static function categoriesFor(User $user): array
     {
@@ -74,7 +74,7 @@ final class Navigation
                     ['label' => 'Słowniki', 'route' => 'dictionaries.ticket-categories', 'active' => 'dictionaries.*', 'icon' => 'sliders', 'visible' => $user->can('manage-categories')],
                     ['label' => 'Audyt', 'route' => 'audit.index', 'active' => 'audit.*', 'icon' => 'shield', 'visible' => $user->can('view-audit')],
                     ['label' => 'Profile dostępu', 'route' => 'settings.access-profiles', 'active' => 'settings.access-profiles', 'icon' => 'users', 'visible' => $user->can('access-admin')],
-                    ['label' => 'Ustawienia', 'route' => 'settings.branding', 'active' => 'settings.*', 'icon' => 'settings', 'visible' => $user->can('access-admin')],
+                    ['label' => 'Ustawienia', 'route' => 'settings.branding', 'active' => ['settings.branding', 'settings.menu-icons'], 'icon' => 'settings', 'visible' => $user->can('access-admin')],
                 ],
             ],
         ];
