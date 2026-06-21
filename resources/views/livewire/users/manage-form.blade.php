@@ -25,13 +25,29 @@
                         <label for="role">Rola *
                             @if ($isSelf)<span class="hint">— nie możesz zmienić własnej roli</span>@endif
                         </label>
-                        <select id="role" class="select" wire:model="role" @disabled($isSelf)>
+                        <select id="role" class="select" wire:model.live="role" @disabled($isSelf)>
                             @foreach ($roleOptions as $value => $label)
                                 <option value="{{ $value }}">{{ $label }}</option>
                             @endforeach
                         </select>
                         @error('role') <span class="error">{{ $message }}</span> @enderror
                     </div>
+
+                    @if ($isStaffRole)
+                        <div class="field">
+                            <label for="access_profile_id">Profil dostępu (personel)
+                                @if ($isSelf)<span class="hint">— nie możesz zmienić własnego profilu</span>@endif
+                            </label>
+                            <select id="access_profile_id" class="select" wire:model="access_profile_id" @disabled($isSelf)>
+                                <option value="">— domyślny dla roli —</option>
+                                @foreach ($staffProfiles as $profile)
+                                    <option value="{{ $profile->id }}">{{ $profile->name }}</option>
+                                @endforeach
+                            </select>
+                            <span class="hint">Puste = domyślne uprawnienia roli. Profile zarządzasz w „Profile dostępu".</span>
+                            @error('access_profile_id') <span class="error">{{ $message }}</span> @enderror
+                        </div>
+                    @endif
 
                     <div class="field">
                         <label for="phone">Telefon</label>
@@ -76,20 +92,37 @@
             <div class="card__head">Członkostwa w organizacjach ({{ $memberships->count() }})</div>
             <div class="card__body stack" style="gap:8px">
                 @forelse ($memberships as $membership)
-                    <div class="list-row">
-                        <span>
-                            <strong>{{ $membership->organization?->name ?? '—' }}</strong>
-                            — {{ $membership->role->label() }}
-                            @if ($membership->isManager() && $membership->manager_scope)
-                                · {{ $membership->manager_scope->label() }}
-                            @endif
-                            @if (! $membership->is_active)
-                                <span class="badge badge--red">nieaktywne</span>
-                            @endif
-                        </span>
-                        <button type="button" class="btn-link" style="color:var(--danger)"
-                            wire:click="removeMembership({{ $membership->id }})"
-                            wire:confirm="Cofnąć członkostwo w tej organizacji?">usuń</button>
+                    <div style="border-bottom:1px solid var(--border);padding:10px 0">
+                        <div class="list-row" style="border:none;padding:0">
+                            <span>
+                                <strong>{{ $membership->organization?->name ?? '—' }}</strong>
+                                — {{ $membership->role->label() }}
+                                @if ($membership->isManager() && $membership->manager_scope)
+                                    · {{ $membership->manager_scope->label() }}
+                                @endif
+                                @if (! $membership->is_active)
+                                    <span class="badge badge--red">nieaktywne</span>
+                                @endif
+                            </span>
+                            <button type="button" class="btn-link" style="color:var(--danger)"
+                                wire:click="removeMembership({{ $membership->id }})"
+                                wire:confirm="Cofnąć członkostwo w tej organizacji?">usuń</button>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">
+                            <span class="muted" style="font-size:12px">Profil dostępu:</span>
+                            <select class="select" style="max-width:280px"
+                                    aria-label="Profil dostępu dla {{ $membership->organization?->name }}"
+                                    wire:model="membershipProfiles.{{ $membership->id }}">
+                                <option value="">— domyślny dla roli ({{ $membership->role->label() }}) —</option>
+                                @foreach ($clientProfiles as $profile)
+                                    <option value="{{ $profile->id }}">{{ $profile->name }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                wire:click="saveMembershipProfile({{ $membership->id }})">
+                                Zapisz profil
+                            </button>
+                        </div>
                     </div>
                 @empty
                     <p class="muted" style="margin:0">Brak członkostw.</p>
@@ -130,6 +163,17 @@
                                 @error('newManagerScope') <span class="error">{{ $message }}</span> @enderror
                             </div>
                         @endif
+
+                        <div class="field">
+                            <label for="newAccessProfileId">Profil dostępu</label>
+                            <select id="newAccessProfileId" class="select" wire:model="newAccessProfileId">
+                                <option value="">— domyślny dla roli —</option>
+                                @foreach ($clientProfiles as $profile)
+                                    <option value="{{ $profile->id }}">{{ $profile->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('newAccessProfileId') <span class="error">{{ $message }}</span> @enderror
+                        </div>
 
                         <div class="field">
                             <label class="checkbox">

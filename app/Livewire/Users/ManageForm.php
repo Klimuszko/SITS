@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Enums\ManagerScope;
 use App\Enums\OrgRole;
 use App\Enums\Role;
+use App\Models\AccessProfile;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
@@ -29,11 +30,18 @@ class ManageForm extends Component
     public ?string $password = null;
     public ?string $password_confirmation = null;
 
+    // Globalny profil dostępu (personel). Klient czerpie profil z członkostwa.
+    public ?int $access_profile_id = null;
+
     // Pola wiersza "dodaj członkostwo"
     public ?int $newOrganizationId = null;
     public string $newOrgRole = 'user';
     public ?string $newManagerScope = null;
     public bool $newMembershipActive = true;
+    public ?int $newAccessProfileId = null;
+
+    /** Profil per istniejące członkostwo (membership_id => access_profile_id) — edycja inline. */
+    public array $membershipProfiles = [];
 
     public function mount(?User $user = null): void
     {
@@ -46,6 +54,7 @@ class ManageForm extends Component
             $this->role = $user->role->value;
             $this->phone = $user->phone;
             $this->is_active = $user->is_active;
+            $this->access_profile_id = $user->access_profile_id;
         }
     }
 
@@ -53,6 +62,18 @@ class ManageForm extends Component
     public function isEditingSelf(): bool
     {
         return $this->user && $this->user->exists && $this->user->id === auth()->id();
+    }
+
+    /** @return array<int,string> globalne role personelu (mają profil globalny). */
+    protected function staffRoleValues(): array
+    {
+        return [Role::SuperAdmin->value, Role::Admin->value, Role::Support->value];
+    }
+
+    /** Czy wybrana rola to personel (wtedy ma sens globalny profil dostępu). */
+    public function isStaffRole(): bool
+    {
+        return in_array($this->role, $this->staffRoleValues(), true);
     }
 
     /**
@@ -100,6 +121,11 @@ class ManageForm extends Component
                 $this->user && $this->user->exists ? 'nullable' : 'required',
                 'string', 'min:8', 'confirmed',
             ],
+            // Globalny profil musi być profilem personelu (dla klienta i tak zerowany).
+            'access_profile_id' => [
+                'nullable', 'integer',
+                Rule::exists('access_profiles', 'id')->where('applies_to', AccessProfile::APPLIES_STAFF),
+            ],
         ];
     }
 
@@ -116,10 +142,12 @@ class ManageForm extends Component
         // Ponowna autoryzacja po stronie serwera (nie tylko w mount()).
         $this->authorize($this->user && $this->user->exists ? 'update' : 'create', $this->user ?? User::class);
 
-        // Self-protection: edytując własne konto nie można zmienić roli ani dezaktywować się.
+        // Self-protection: edytując własne konto nie można zmienić roli, dezaktywować
+        // się ani zmienić własnego profilu dostępu (ochrona przed odcięciem sobie dostępu).
         if ($this->isEditingSelf()) {
             $this->role = $this->user->role->value;
             $this->is_active = $this->user->is_active;
+            $this->access_profile_id = $this->user->access_profile_id;
         }
 
         $data = $this->validate();
@@ -134,6 +162,11 @@ class ManageForm extends Component
             $target->role = $data['role'];
             $target->phone = $data['phone'];
             $target->is_active = $data['is_active'];
+
+            // Profil globalny tylko dla personelu; klient czerpie profil z członkostwa.
+            $target->access_profile_id = in_array($data['role'], $this->staffRoleValues(), true)
+                ? ($data['access_profile_id'] ?? null)
+                : null;
 
             // Hasło: ustawiamy tylko gdy podano (cast 'hashed' zahashuje automatycznie — bez podwójnego hashowania).
             if (filled($data['password'])) {
@@ -193,6 +226,11 @@ class ManageForm extends Component
                 Rule::enum(ManagerScope::class),
             ],
             'newMembershipActive' => ['boolean'],
+            // Profil klienta (opcjonalny; puste = domyślne uprawnienia roli w organizacji).
+            'newAccessProfileId' => [
+                'nullable', 'integer',
+                Rule::exists('access_profiles', 'id')->where('applies_to', AccessProfile::APPLIES_CLIENT),
+            ],
         ], [
             'newOrganizationId.not_in' => 'Użytkownik jest już członkiem tej organizacji.',
             'newManagerScope.required' => 'Wybierz zakres managera.',
@@ -203,6 +241,7 @@ class ManageForm extends Component
         $membership = $this->user->memberships()->create([
             'organization_id' => $this->newOrganizationId,
             'role' => $this->newOrgRole,
+            'access_profile_id' => $this->newAccessProfileId,
             'manager_scope' => $scope,
             'is_active' => $this->newMembershipActive,
         ]);
@@ -220,8 +259,41 @@ class ManageForm extends Component
         );
 
         // reset() przywraca zadeklarowane wartości domyślne (newOrgRole='user', newMembershipActive=true).
-        $this->reset(['newOrganizationId', 'newOrgRole', 'newManagerScope', 'newMembershipActive']);
+        $this->reset(['newOrganizationId', 'newOrgRole', 'newManagerScope', 'newMembershipActive', 'newAccessProfileId']);
         $this->user->refresh();
+    }
+
+    /** Zmiana profilu dostępu istniejącego członkostwa (klient, per organizacja). */
+    public function saveMembershipProfile(int $membershipId): void
+    {
+        $this->authorize('update', $this->user);
+
+        $membership = $this->user->memberships()->whereKey($membershipId)->first();
+        if (! $membership) {
+            return;
+        }
+
+        $raw = $this->membershipProfiles[$membershipId] ?? null;
+        $profileId = ($raw === null || $raw === '') ? null : (int) $raw;
+
+        // Musi być profilem klienta (albo brak = domyślne uprawnienia roli).
+        if ($profileId !== null
+            && ! AccessProfile::where('id', $profileId)->where('applies_to', AccessProfile::APPLIES_CLIENT)->exists()) {
+            return;
+        }
+
+        $old = $membership->access_profile_id;
+        $membership->update(['access_profile_id' => $profileId]);
+
+        AuditLogger::log(
+            'membership.access_profile_changed',
+            $membership->organization,
+            ['access_profile_id' => $old],
+            ['access_profile_id' => $profileId],
+        );
+
+        $this->user->refresh();
+        session()->flash('status', 'Zapisano profil dostępu członkostwa.');
     }
 
     public function removeMembership(int $membershipId): void
@@ -253,6 +325,11 @@ class ManageForm extends Component
             ? $this->user->memberships()->with('organization')->get()
             : collect();
 
+        // Wypełnij stan inline-edycji profilu dla każdego członkostwa (bez nadpisywania zmian użytkownika).
+        foreach ($memberships as $membership) {
+            $this->membershipProfiles[$membership->id] ??= $membership->access_profile_id;
+        }
+
         $assignedOrgIds = $this->user
             ? $this->user->memberships()->pluck('organization_id')->all()
             : [];
@@ -266,6 +343,14 @@ class ManageForm extends Component
                 ->whereNotIn('id', $assignedOrgIds)
                 ->orderBy('name')->get(),
             'isSelf' => $this->isEditingSelf(),
+            'isStaffRole' => $this->isStaffRole(),
+            'staffProfiles' => AccessProfile::where('applies_to', AccessProfile::APPLIES_STAFF)
+                ->where('is_active', true)
+                ->where('key', '!=', AccessProfile::SUPER_ADMIN)
+                ->orderBy('name')->get(),
+            'clientProfiles' => AccessProfile::where('applies_to', AccessProfile::APPLIES_CLIENT)
+                ->where('is_active', true)
+                ->orderBy('name')->get(),
         ]);
     }
 }
