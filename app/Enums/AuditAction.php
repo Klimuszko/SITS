@@ -15,6 +15,7 @@ enum AuditAction: string
     case UserCreated = 'user.created';
     case UserUpdated = 'user.updated';
     case UserRoleChanged = 'user.role_changed';
+    case UserDeleted = 'user.deleted';
     case MembershipGranted = 'membership.granted';
     case MembershipRevoked = 'membership.revoked';
     case SupportAssigned = 'support.assigned';

@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Users;
 
+use App\Enums\AuditAction;
 use App\Enums\Role;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -43,6 +45,25 @@ class Index extends Component
     public function updatingActive(): void
     {
         $this->resetPage();
+    }
+
+    /**
+     * Usunięcie (soft delete) konta. Policy chroni Super Admina i konto własne
+     * (UserPolicy::delete). Soft delete — konto znika z list, ale jest odzyskiwalne.
+     */
+    public function deleteUser(int $id): void
+    {
+        $user = User::findOrFail($id);
+        $this->authorize('delete', $user);
+
+        AuditLogger::log(AuditAction::UserDeleted, $user, [
+            'email' => $user->email,
+            'role' => $user->role->value,
+        ], null);
+
+        $user->delete();
+
+        session()->flash('status', 'Użytkownik został usunięty.');
     }
 
     public function render()

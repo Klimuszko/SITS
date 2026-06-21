@@ -103,6 +103,7 @@ return [
         'user.created' => 'Utworzono użytkownika',
         'user.updated' => 'Zmieniono użytkownika',
         'user.role_changed' => 'Zmieniono rolę użytkownika',
+        'user.deleted' => 'Usunięto użytkownika',
         'membership.granted' => 'Przyznano członkostwo w organizacji',
         'membership.revoked' => 'Cofnięto członkostwo w organizacji',
         'support.assigned' => 'Przypisano support',

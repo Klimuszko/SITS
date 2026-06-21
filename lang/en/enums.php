@@ -104,6 +104,7 @@ return [
         'user.created' => 'User created',
         'user.updated' => 'User updated',
         'user.role_changed' => 'User role changed',
+        'user.deleted' => 'User deleted',
         'membership.granted' => 'Organization membership granted',
         'membership.revoked' => 'Organization membership revoked',
         'support.assigned' => 'Support assigned',
