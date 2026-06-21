@@ -73,11 +73,33 @@ class AccessProfileTest extends TestCase
         $this->assertFalse($support->hasPermission(Permission::UsersManage));
     }
 
-    public function test_staff_without_profile_has_no_permissions(): void
+    public function test_staff_without_profile_falls_back_to_role_defaults(): void
     {
+        // Bez przypisanego profilu obowiązuje domyślny zestaw wg roli (enum = baza).
         $support = User::factory()->support()->create();
+        $this->assertTrue($support->hasPermission(Permission::TicketsManage));  // w domyślnym secie supporta
+        $this->assertFalse($support->hasPermission(Permission::AuditView));     // poza nim
+        $this->assertFalse($support->hasPermission(Permission::UsersManage));
 
-        $this->assertFalse($support->hasPermission(Permission::TicketsManage));
+        $admin = User::factory()->admin()->create();
+        $this->assertTrue($admin->hasPermission(Permission::AuditView));        // admin = pełny zestaw
+    }
+
+    public function test_client_without_membership_profile_falls_back_to_orgrole_defaults(): void
+    {
+        $org = Organization::factory()->create();
+        $client = User::factory()->create();
+
+        OrganizationMembership::create([
+            'user_id' => $client->id,
+            'organization_id' => $org->id,
+            'role' => OrgRole::Manager->value,
+            'is_active' => true,   // bez access_profile_id → fallback wg OrgRole
+        ]);
+        $client = $client->fresh();
+
+        $this->assertTrue($client->hasPermission(Permission::TicketsView, $org));   // domyślny manager
+        $this->assertFalse($client->hasPermission(Permission::TicketsManage, $org)); // manage = personel
     }
 
     public function test_client_uses_per_org_membership_profile(): void
@@ -145,5 +167,22 @@ class AccessProfileTest extends TestCase
         $this->assertSame(AccessProfile::ADMIN, $admin->fresh()->accessProfile?->key);
         $this->assertNull($client->fresh()->access_profile_id);        // klient: globalnie null
         $this->assertSame(AccessProfile::MANAGER, $membership->fresh()->accessProfile?->key);
+    }
+
+    public function test_admin_gates_behaviour_preserved_via_permissions(): void
+    {
+        // A2: bramki idą przez hasPermission. Bez przypisanego profilu działa fallback,
+        // więc zachowanie = dotychczasowe (admin przechodzi, support nie).
+        $admin = User::factory()->admin()->create();
+        $support = User::factory()->support()->create();
+
+        foreach (['access-admin', 'manage-users', 'manage-categories', 'view-audit'] as $gate) {
+            $this->assertTrue($admin->can($gate), "admin powinien przejść $gate");
+            $this->assertFalse($support->can($gate), "support nie powinien przejść $gate");
+        }
+
+        // Bramki wyłącznie Super Admina — niezmienione.
+        $this->assertFalse($admin->can('force-delete'));
+        $this->assertTrue(User::factory()->superAdmin()->create()->can('force-delete'));
     }
 }

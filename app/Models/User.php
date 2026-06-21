@@ -195,7 +195,12 @@ class User extends Authenticatable
         $key = $permission instanceof Permission ? $permission->value : $permission;
 
         if ($this->isStaff()) {
-            return $this->accessProfile?->grants($key) ?? false;
+            if ($this->accessProfile !== null) {
+                return $this->accessProfile->grants($key);
+            }
+
+            // Fallback: brak przypisanego profilu → domyślny zestaw wg roli.
+            return in_array($key, AccessProfile::defaultPermissionsForRole($this->role), true);
         }
 
         $organizationId = $this->resolveOrganizationId($context);
@@ -203,7 +208,17 @@ class User extends Authenticatable
             return false;
         }
 
-        return $this->membershipFor($organizationId)?->accessProfile?->grants($key) ?? false;
+        $membership = $this->membershipFor($organizationId);
+        if ($membership === null) {
+            return false;
+        }
+
+        if ($membership->accessProfile !== null) {
+            return $membership->accessProfile->grants($key);
+        }
+
+        // Fallback: członkostwo bez profilu → domyślny zestaw wg roli w organizacji.
+        return in_array($key, AccessProfile::defaultPermissionsForOrgRole($membership->role), true);
     }
 
     /** Wyłuskuje id organizacji z kontekstu uprawnienia (lub null). */

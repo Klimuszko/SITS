@@ -18,6 +18,7 @@ use App\Policies\LocationPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\TicketPolicy;
 use App\Policies\UserPolicy;
+use App\Enums\Permission;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -46,14 +47,17 @@ class AuthServiceProvider extends ServiceProvider
             return $user->isSuperAdmin() ? true : null;
         });
 
-        // Bramki administracyjne.
-        Gate::define('access-admin', fn (User $user) => $user->isAdminLevel());
+        // Bramki uprawnień (warstwa „CO") — przez profile dostępu (z fallbackiem
+        // do domyślnych uprawnień roli, gdy konto nie ma jeszcze profilu).
+        Gate::define('access-admin', fn (User $user) => $user->hasPermission(Permission::SettingsManage));
+        Gate::define('manage-users', fn (User $user) => $user->hasPermission(Permission::UsersManage));
+        Gate::define('manage-categories', fn (User $user) => $user->hasPermission(Permission::CategoriesManage));
+        Gate::define('view-audit', fn (User $user) => $user->hasPermission(Permission::AuditView));
+
+        // Bramki klasy konta / wyłącznie Super Admin — to NIE są przypisywalne
+        // uprawnienia (manage-system, force-delete przechodzą przez Gate::before).
         Gate::define('manage-system', fn (User $user) => $user->isSuperAdmin());
-        // Trwałe (twarde) usuwanie definicji — wyłącznie Super Admin.
         Gate::define('force-delete', fn (User $user) => $user->isSuperAdmin());
-        Gate::define('manage-users', fn (User $user) => $user->isAdminLevel());
-        Gate::define('manage-categories', fn (User $user) => $user->isAdminLevel());
-        Gate::define('view-audit', fn (User $user) => $user->isAdminLevel());
         Gate::define('access-staff', fn (User $user) => $user->isStaff());
     }
 }

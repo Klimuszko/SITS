@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Enums\OrgRole;
-use App\Enums\Permission as P;
 use App\Enums\Role;
 use App\Models\AccessProfile;
 use App\Models\OrganizationMembership;
@@ -20,43 +19,17 @@ class AccessProfileSeeder extends Seeder
 {
     public function run(): void
     {
-        $all = P::values();
-
-        $support = $this->keys([
-            P::TicketsView, P::TicketsComment, P::TicketsManage, P::TicketsInternalNote, P::TicketsClose,
-            P::AssetsView, P::AssetsCreate, P::AssetsUpdate, P::AssetsArchive,
-            P::LocationsView, P::LocationsManage,
-            P::OrganizationsView,
-            P::WorkLogsView, P::WorkLogsCreate, P::WorkLogsReport,
-            P::KnowledgeView, P::KnowledgeCreate, P::KnowledgeManage,
-        ]);
-
-        $user = $this->keys([
-            P::TicketsComment,
-            P::AssetsView, P::LocationsView, P::OrganizationsView, P::WorkLogsView, P::KnowledgeView,
-        ]);
-
-        // Manager = user + podgląd wszystkich zgłoszeń organizacji.
-        $manager = array_values(array_unique(array_merge($user, $this->keys([P::TicketsView]))));
-
-        $profiles = [
-            [AccessProfile::SUPER_ADMIN, 'Super Admin', AccessProfile::APPLIES_STAFF, $all],
-            [AccessProfile::ADMIN, 'Administrator', AccessProfile::APPLIES_STAFF, $all],
-            [AccessProfile::SUPPORT, 'Support', AccessProfile::APPLIES_STAFF, $support],
-            [AccessProfile::MANAGER, 'Manager', AccessProfile::APPLIES_CLIENT, $manager],
-            [AccessProfile::USER, 'Użytkownik', AccessProfile::APPLIES_CLIENT, $user],
-        ];
-
+        // Profile systemowe z jednego źródła prawdy (AccessProfile::systemDefinitions).
         $byKey = [];
-        foreach ($profiles as [$key, $name, $appliesTo, $permissions]) {
+        foreach (AccessProfile::systemDefinitions() as $key => $def) {
             $byKey[$key] = AccessProfile::updateOrCreate(
                 ['key' => $key],
                 [
-                    'name' => $name,
-                    'applies_to' => $appliesTo,
+                    'name' => $def['name'],
+                    'applies_to' => $def['applies_to'],
                     'is_system' => true,
                     'is_active' => true,
-                    'permissions' => $permissions,
+                    'permissions' => $def['permissions'],
                 ],
             );
         }
@@ -80,14 +53,5 @@ class AccessProfileSeeder extends Seeder
             $key = $m->role === OrgRole::Manager ? AccessProfile::MANAGER : AccessProfile::USER;
             $m->forceFill(['access_profile_id' => $byKey[$key]->id])->save();
         });
-    }
-
-    /**
-     * @param  list<P>  $permissions
-     * @return list<string>
-     */
-    private function keys(array $permissions): array
-    {
-        return array_map(fn (P $p) => $p->value, $permissions);
     }
 }
