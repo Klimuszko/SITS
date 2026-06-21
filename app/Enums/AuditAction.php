@@ -50,6 +50,10 @@ enum AuditAction: string
     case WorkLogCreated = 'work_log.created';
     case WorkLogUpdated = 'work_log.updated';
 
+    case AccessProfileCreated = 'access_profile.created';
+    case AccessProfileUpdated = 'access_profile.updated';
+    case AccessProfileDeleted = 'access_profile.deleted';
+
     public function label(): string
     {
         return __('enums.audit_action.'.$this->value);

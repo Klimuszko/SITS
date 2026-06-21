@@ -131,6 +131,9 @@ return [
         'article.visibility_changed' => 'Zmieniono widoczność artykułu',
         'work_log.created' => 'Utworzono pracę administracyjną',
         'work_log.updated' => 'Zmieniono pracę administracyjną',
+        'access_profile.created' => 'Utworzono profil dostępu',
+        'access_profile.updated' => 'Zmieniono profil dostępu',
+        'access_profile.deleted' => 'Usunięto profil dostępu',
     ],
 
 ];

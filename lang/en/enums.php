@@ -132,6 +132,9 @@ return [
         'article.visibility_changed' => 'Article visibility changed',
         'work_log.created' => 'Administrative work log created',
         'work_log.updated' => 'Administrative work log updated',
+        'access_profile.created' => 'Access profile created',
+        'access_profile.updated' => 'Access profile updated',
+        'access_profile.deleted' => 'Access profile deleted',
     ],
 
 ];

@@ -25,6 +25,7 @@ use App\Livewire\Locations\ManageForm as LocationForm;
 use App\Livewire\Organizations\Index as OrganizationIndex;
 use App\Livewire\Organizations\ManageForm as OrganizationForm;
 use App\Livewire\Profile\Edit as ProfileEdit;
+use App\Livewire\Settings\AccessProfiles as SettingsAccessProfiles;
 use App\Livewire\Settings\Branding as SettingsBranding;
 use App\Livewire\Settings\MenuIcons as SettingsMenuIcons;
 use App\Livewire\Tickets\Create as TicketCreate;
@@ -146,4 +147,5 @@ Route::middleware('auth')->group(function () {
     // Ustawienia brandingu + ikon menu (admin). Autoryzacja w mount() przez bramkę access-admin.
     Route::get('/ustawienia/branding', SettingsBranding::class)->name('settings.branding');
     Route::get('/ustawienia/ikony-menu', SettingsMenuIcons::class)->name('settings.menu-icons');
+    Route::get('/ustawienia/profile-dostepu', SettingsAccessProfiles::class)->name('settings.access-profiles');
 });
