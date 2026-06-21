@@ -11,33 +11,11 @@
     @endif
 
     @if ($node['group'])
-        {{-- Grupa powtarzalna jako tabela --}}
-        @if ($node['group']['rows']->isEmpty())
-            <p class="muted" style="margin:0">Brak wpisów.</p>
-        @else
-            <div style="overflow-x:auto">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col">#</th>
-                            @foreach ($node['group']['columns'] as $col)
-                                <th scope="col">{{ $col->name }}</th>
-                            @endforeach
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($node['group']['rows'] as $i => $row)
-                            <tr>
-                                <td class="muted">#{{ $i + 1 }}</td>
-                                @foreach ($node['group']['columns'] as $col)
-                                    <td>{{ $row['cells'][$col->id] ?? '—' }}</td>
-                                @endforeach
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
+        @include('livewire.assets._group-view', [
+            'view' => $node['group'],
+            'label' => $section->name,
+            'depth' => 0,
+        ])
     @else
         {{-- Sekcja / podsekcja: pola pojedyncze --}}
         @forelse ($node['fields'] as $field)

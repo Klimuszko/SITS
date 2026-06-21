@@ -108,12 +108,45 @@ class ManageForm extends Component
         return $category ? $this->structure()->singleFields($category) : collect();
     }
 
-    /** Aktywne grupy powtarzalne (z dociążonymi polami) wybranej kategorii. */
-    protected function repeatableGroups(): Collection
+    /** Grupy powtarzalne najwyższego poziomu wybranej kategorii (korzenie rekurencji). */
+    protected function topGroups(): Collection
     {
         $category = $this->category();
 
-        return $category ? $this->structure()->repeatableGroups($category) : collect();
+        return $category ? $this->structure()->topRepeatableGroups($category) : collect();
+    }
+
+    /** Bezpośrednie powtarzalne dzieci węzła (grupy zagnieżdżone w grupie). */
+    protected function repeatableChildren(AssetSection $node): Collection
+    {
+        return $this->structure()->repeatableChildren($node);
+    }
+
+    /** Odnajduje węzeł grupy powtarzalnej (z polami + dziećmi) po id, w całym drzewie. */
+    protected function groupNodeById(int $id): ?AssetSection
+    {
+        $found = null;
+
+        $walk = function ($nodes) use (&$walk, &$found, $id) {
+            foreach ($nodes as $node) {
+                if ($found !== null) {
+                    return;
+                }
+                if ($node->is_repeatable && $node->id === $id) {
+                    $found = $node;
+
+                    return;
+                }
+                $walk($node->childNodes);
+            }
+        };
+
+        $category = $this->category();
+        if ($category) {
+            $walk($this->structure()->tree($category));
+        }
+
+        return $found;
     }
 
     /** Drzewo aktywnych sekcji wybranej kategorii (do renderowania z zagnieżdżeniem). */
@@ -167,30 +200,48 @@ class ManageForm extends Component
         return $field->default_value !== null && $field->default_value !== '' ? $field->default_value : null;
     }
 
-    /** Pusty zestaw wartości dla nowego wiersza grupy (z wartościami domyślnymi pól). */
-    protected function blankRow(AssetSection $group): array
+    /**
+     * Pusty wiersz grupy: wartości domyślne pól + (do MAX_GROUP_DEPTH) puste
+     * kolekcje wierszy zagnieżdżonych grup powtarzalnych, z ich min_entries.
+     */
+    protected function blankRow(AssetSection $group, int $level = 1): array
     {
         $values = [];
         foreach ($group->activeFields as $field) {
             $values[$field->id] = $this->defaultFor($field);
         }
 
-        return ['id' => null, 'values' => $values];
+        $children = [];
+        if ($level < AssetStructure::MAX_GROUP_DEPTH) {
+            foreach ($this->repeatableChildren($group) as $child) {
+                $children[$child->id] = $this->seedRows($child, $level + 1);
+            }
+        }
+
+        return ['id' => null, 'values' => $values, 'children' => $children];
+    }
+
+    /** Zestaw min_entries pustych wierszy danej grupy (rekurencyjnie dla dzieci). */
+    protected function seedRows(AssetSection $group, int $level): array
+    {
+        $min = $group->min_entries ?? 0;
+        $rows = [];
+        for ($i = 0; $i < $min; $i++) {
+            $rows[$i] = $this->blankRow($group, $level);
+        }
+
+        return $rows;
     }
 
     /**
-     * Dla NOWEGO zasobu: jeśli grupa wymaga min_entries, zaczynamy od tylu pustych
-     * wierszy (min. 1, gdy min_entries > 0). Bez wymogu → 0 wierszy (brak pustych bloków).
+     * Dla NOWEGO zasobu: każda grupa najwyższego poziomu startuje z min_entries
+     * pustych wierszy (rekurencyjnie także zagnieżdżone grupy, do MAX_GROUP_DEPTH).
      */
     protected function seedGroupMinimums(): void
     {
-        foreach ($this->repeatableGroups() as $group) {
-            $min = $group->min_entries ?? 0;
-            $rows = [];
-            for ($i = 0; $i < $min; $i++) {
-                $rows[$i] = $this->blankRow($group);
-            }
-            $this->groups[$group->id] = $rows;
+        $this->groups = [];
+        foreach ($this->topGroups() as $group) {
+            $this->groups[$group->id] = $this->seedRows($group, 1);
         }
     }
 
@@ -213,65 +264,99 @@ class ManageForm extends Component
                 : $value;
         }
 
-        // Grupy powtarzalne: wpisy zasobu pogrupowane po sekcji, w kolejności `order`.
-        $entriesBySection = $this->asset->groupEntries()
-            ->with('values')
-            ->get()
-            ->groupBy('asset_section_id');
+        // Grupy powtarzalne: wszystkie wpisy zasobu wczytane raz i zindeksowane
+        // [asset_section_id][parent_entry_id ?? 0], potem rekurencyjne złożenie stanu.
+        $index = [];
+        foreach ($this->asset->groupEntries()->with('values')->get() as $entry) {
+            $index[$entry->asset_section_id][$entry->parent_entry_id ?? 0][] = $entry;
+        }
 
-        foreach ($this->repeatableGroups() as $group) {
+        $this->groups = $this->loadGroupLevel($this->topGroups(), null, 1, $index);
+    }
+
+    /**
+     * Rekurencyjnie składa stan $groups z istniejących wpisów (edycja). Wpisy
+     * dziecka filtrowane po parent_entry_id; rekursja do MAX_GROUP_DEPTH.
+     *
+     * @param  Collection<int,AssetSection>  $groups
+     * @param  array<int,array<int,array<int,\App\Models\AssetGroupEntry>>>  $index
+     * @return array<int,array<int,array{id:int|null,values:array<int,mixed>,children:array<int,mixed>}>>
+     */
+    protected function loadGroupLevel(Collection $groups, ?int $parentEntryId, int $level, array $index): array
+    {
+        $result = [];
+        $parentKey = $parentEntryId ?? 0;
+
+        foreach ($groups as $group) {
+            $entries = collect($index[$group->id][$parentKey] ?? [])->sortBy('order')->values();
             $rows = [];
-            $entries = ($entriesBySection->get($group->id) ?? collect())->sortBy('order')->values();
 
-            foreach ($entries as $index => $entry) {
+            foreach ($entries as $i => $entry) {
                 $valuesByField = $entry->values->keyBy('asset_field_id');
                 $rowValues = [];
 
                 foreach ($group->activeFields as $field) {
                     $raw = $valuesByField->get($field->id)?->value;
-
                     $rowValues[$field->id] = $field->type === AssetFieldType::Boolean
                         ? ($raw === '1')
                         : ($raw ?? $this->defaultFor($field));
                 }
 
-                $rows[$index] = ['id' => $entry->id, 'values' => $rowValues];
+                $children = $level < AssetStructure::MAX_GROUP_DEPTH
+                    ? $this->loadGroupLevel($this->repeatableChildren($group), $entry->id, $level + 1, $index)
+                    : [];
+
+                $rows[$i] = ['id' => $entry->id, 'values' => $rowValues, 'children' => $children];
             }
 
-            $this->groups[$group->id] = $rows;
+            $result[$group->id] = $rows;
         }
+
+        return $result;
     }
 
     /* ----------------------------- Wiersze grup ----------------------------- */
 
-    /** Dodaje pusty wiersz do grupy (respektuje max_entries). */
-    public function addRow(int $sectionId): void
+    /**
+     * Dodaje pusty wiersz grupy pod ścieżką względną do $groups (top: "5";
+     * zagnieżdżona: "5.0.children.8"). Respektuje max_entries. Poziom (cap
+     * zagnieżdżenia w blankRow) wyliczany z liczby segmentów ".children.".
+     */
+    public function addRow(int|string $path): void
     {
-        $group = $this->repeatableGroups()->firstWhere('id', $sectionId);
+        $path = (string) $path;   // wire:click podaje string; testy bywa, że int — ujednolicamy
+        $sectionId = $this->sectionIdFromPath($path);
+        $group = $this->groupNodeById($sectionId);
         if (! $group) {
             return;
         }
 
-        $rows = array_values($this->groups[$sectionId] ?? []);
+        $rows = array_values((array) data_get($this->groups, $path, []));
         $max = $group->max_entries;
 
         if ($max !== null && count($rows) >= $max) {
             return;
         }
 
-        $rows[] = $this->blankRow($group);
-        $this->groups[$sectionId] = $rows;
+        $level = substr_count($path, '.children.') + 1;
+        $rows[] = $this->blankRow($group, $level);
+
+        $groups = $this->groups;
+        data_set($groups, $path, $rows);
+        $this->groups = $groups;
     }
 
-    /** Usuwa wiersz grupy (respektuje min_entries). */
-    public function removeRow(int $sectionId, int $index): void
+    /** Usuwa wiersz grupy spod ścieżki (jak addRow). Respektuje min_entries. */
+    public function removeRow(int|string $path, int $index): void
     {
-        $group = $this->repeatableGroups()->firstWhere('id', $sectionId);
+        $path = (string) $path;
+        $sectionId = $this->sectionIdFromPath($path);
+        $group = $this->groupNodeById($sectionId);
         if (! $group) {
             return;
         }
 
-        $rows = array_values($this->groups[$sectionId] ?? []);
+        $rows = array_values((array) data_get($this->groups, $path, []));
         $min = $group->min_entries ?? 0;
 
         if (! array_key_exists($index, $rows) || count($rows) <= $min) {
@@ -279,7 +364,17 @@ class ManageForm extends Component
         }
 
         unset($rows[$index]);
-        $this->groups[$sectionId] = array_values($rows);
+        $rows = array_values($rows);
+
+        $groups = $this->groups;
+        data_set($groups, $path, $rows);
+        $this->groups = $groups;
+    }
+
+    /** Ostatni segment ścieżki grupy = asset_section_id. */
+    protected function sectionIdFromPath(string $path): int
+    {
+        return (int) (str_contains($path, '.') ? substr($path, strrpos($path, '.') + 1) : $path);
     }
 
     /* ------------------------------ Walidacja ------------------------------ */
@@ -310,13 +405,10 @@ class ManageForm extends Component
             $rules['values.'.$field->id] = $this->fieldRules($field);
         }
 
-        // Grupy powtarzalne: liczność + reguły per pole każdego wiersza.
-        foreach ($this->repeatableGroups() as $group) {
-            $rules['groups.'.$group->id] = $this->groupCountRules($group);
-
-            foreach ($group->activeFields as $field) {
-                $rules['groups.'.$group->id.'.*.values.'.$field->id] = $this->fieldRules($field);
-            }
+        // Grupy powtarzalne (rekurencyjnie, do MAX_GROUP_DEPTH): liczność grupy
+        // + reguły per pole każdego wiersza, ze wzorcem .* dla każdego poziomu.
+        foreach ($this->topGroups() as $group) {
+            $this->addGroupRules($rules, $group, 'groups.'.$group->id, 1);
         }
 
         return $rules;
@@ -336,6 +428,27 @@ class ManageForm extends Component
         }
 
         return $rules;
+    }
+
+    /**
+     * Rekurencyjnie dokłada reguły grupy (liczność + pola wierszy), dla dzieci
+     * aż do MAX_GROUP_DEPTH. $prefix to ścieżka reguł kończąca się id grupy.
+     *
+     * @param  array<string,mixed>  $rules
+     */
+    protected function addGroupRules(array &$rules, AssetSection $group, string $prefix, int $level): void
+    {
+        $rules[$prefix] = $this->groupCountRules($group);
+
+        foreach ($group->activeFields as $field) {
+            $rules[$prefix.'.*.values.'.$field->id] = $this->fieldRules($field);
+        }
+
+        if ($level < AssetStructure::MAX_GROUP_DEPTH) {
+            foreach ($this->repeatableChildren($group) as $child) {
+                $this->addGroupRules($rules, $child, $prefix.'.*.children.'.$child->id, $level + 1);
+            }
+        }
     }
 
     /** @return array<int,mixed> Reguły walidacji dla pojedynczego pola dynamicznego. */
@@ -381,15 +494,32 @@ class ManageForm extends Component
             $attributes['values.'.$field->id] = $field->name;
         }
 
-        foreach ($this->repeatableGroups() as $group) {
-            $attributes['groups.'.$group->id] = $group->ticket_label ?: $group->name;
-
-            foreach ($group->activeFields as $field) {
-                $attributes['groups.'.$group->id.'.*.values.'.$field->id] = $field->name;
-            }
+        foreach ($this->topGroups() as $group) {
+            $this->addGroupAttributes($attributes, $group, 'groups.'.$group->id, 1);
         }
 
         return $attributes;
+    }
+
+    /**
+     * Rekurencyjnie dokłada czytelne nazwy atrybutów walidacji grupy i jej pól,
+     * dla dzieci aż do MAX_GROUP_DEPTH.
+     *
+     * @param  array<string,string>  $attributes
+     */
+    protected function addGroupAttributes(array &$attributes, AssetSection $group, string $prefix, int $level): void
+    {
+        $attributes[$prefix] = $group->ticket_label ?: $group->name;
+
+        foreach ($group->activeFields as $field) {
+            $attributes[$prefix.'.*.values.'.$field->id] = $field->name;
+        }
+
+        if ($level < AssetStructure::MAX_GROUP_DEPTH) {
+            foreach ($this->repeatableChildren($group) as $child) {
+                $this->addGroupAttributes($attributes, $child, $prefix.'.*.children.'.$child->id, $level + 1);
+            }
+        }
     }
 
     /* -------------------------------- Zapis -------------------------------- */
@@ -440,35 +570,58 @@ class ManageForm extends Component
     }
 
     /**
-     * @return array<int,array<int,array{id:int|null,values:array<int,mixed>}>>
-     *         Dane grup ograniczone do aktywnych grup i ich aktywnych pól.
+     * Dane grup ograniczone do znanych grup i ich aktywnych pól, rekurencyjnie
+     * (z dziećmi do MAX_GROUP_DEPTH). Kształt zgodny z AssetService::reconcileGroups.
+     *
+     * @return array<int,array<int,array{id:int|null,values:array<int,mixed>,children:array<int,mixed>}>>
      */
     protected function collectGroupData(): array
     {
         $groupData = [];
 
-        foreach ($this->repeatableGroups() as $group) {
-            $rows = array_values($this->groups[$group->id] ?? []);
-            $clean = [];
-
-            foreach ($rows as $row) {
-                $values = [];
-                foreach ($group->activeFields as $field) {
-                    if (isset($row['values']) && array_key_exists($field->id, $row['values'])) {
-                        $values[$field->id] = $row['values'][$field->id];
-                    }
-                }
-
-                $clean[] = [
-                    'id' => isset($row['id']) && $row['id'] !== null ? (int) $row['id'] : null,
-                    'values' => $values,
-                ];
-            }
-
-            $groupData[$group->id] = $clean;
+        foreach ($this->topGroups() as $group) {
+            $groupData[$group->id] = $this->collectRows($group, $this->groups[$group->id] ?? [], 1);
         }
 
         return $groupData;
+    }
+
+    /**
+     * @param  array<int,mixed>  $rawRows
+     * @return array<int,array{id:int|null,values:array<int,mixed>,children:array<int,mixed>}>
+     */
+    protected function collectRows(AssetSection $group, array $rawRows, int $level): array
+    {
+        $clean = [];
+
+        foreach (array_values($rawRows) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $values = [];
+            foreach ($group->activeFields as $field) {
+                if (isset($row['values']) && is_array($row['values']) && array_key_exists($field->id, $row['values'])) {
+                    $values[$field->id] = $row['values'][$field->id];
+                }
+            }
+
+            $children = [];
+            if ($level < AssetStructure::MAX_GROUP_DEPTH) {
+                foreach ($this->repeatableChildren($group) as $child) {
+                    $childRaw = $row['children'][$child->id] ?? [];
+                    $children[$child->id] = $this->collectRows($child, is_array($childRaw) ? $childRaw : [], $level + 1);
+                }
+            }
+
+            $clean[] = [
+                'id' => isset($row['id']) && $row['id'] !== null ? (int) $row['id'] : null,
+                'values' => $values,
+                'children' => $children,
+            ];
+        }
+
+        return $clean;
     }
 
     public function render()

@@ -30,6 +30,13 @@ class AssetStructure
     public const SKIPPED_TYPES = [AssetFieldType::File, AssetFieldType::Relation];
 
     /**
+     * Maksymalna głębokość zagnieżdżenia grup powtarzalnych (grupa w grupie).
+     * Poziom 1 = grupa najwyższego poziomu; głębsze niż MAX są celowo ignorowane
+     * w formularzu, walidacji, zapisie i widoku (twardy bezpiecznik).
+     */
+    public const MAX_GROUP_DEPTH = 3;
+
+    /**
      * Drzewo aktywnych sekcji kategorii (korzenie wg `order`), każdy węzeł
      * z relacjami `childNodes` i `activeFields`.
      *
@@ -58,6 +65,47 @@ class AssetStructure
         return $byParent->get(null, collect())
             ->map(fn (AssetSection $n) => $attach($n))
             ->values();
+    }
+
+    /**
+     * Grupy powtarzalne NAJWYŻSZEGO poziomu (bez powtarzalnego przodka) — korzenie
+     * rekurencji wpisów grup. Sekcje niepowtarzalne są „przezroczyste": schodzimy
+     * przez nie, ale pierwsza napotkana grupa powtarzalna staje się korzeniem
+     * (jej powtarzalne potomstwo to jej grupy-dzieci). Każdy węzeł zachowuje
+     * relacje childNodes + activeFields z tree().
+     *
+     * @return Collection<int,AssetSection>
+     */
+    public function topRepeatableGroups(AssetCategory $category): Collection
+    {
+        $collect = function (Collection $nodes) use (&$collect): Collection {
+            $out = collect();
+
+            foreach ($nodes as $node) {
+                if ($node->is_repeatable) {
+                    $out->push($node);  // korzeń — nie schodzimy głębiej (dzieci ogarnia rekurencja wpisów)
+
+                    continue;
+                }
+
+                $out = $out->merge($collect($node->childNodes));
+            }
+
+            return $out;
+        };
+
+        return $collect($this->tree($category))->values();
+    }
+
+    /**
+     * Bezpośrednie powtarzalne dzieci węzła = grupy zagnieżdżone w grupie.
+     * Sekcje niepowtarzalne wewnątrz grupy powtarzalnej są poza zakresem v1.
+     *
+     * @return Collection<int,AssetSection>
+     */
+    public function repeatableChildren(AssetSection $node): Collection
+    {
+        return $node->childNodes->where('is_repeatable', true)->values();
     }
 
     /**

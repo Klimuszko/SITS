@@ -250,4 +250,105 @@ class AssetServiceFormTest extends TestCase
         ]);
         $this->assertSame(0, AssetGroupEntry::where('asset_id', $asset->id)->count());
     }
+
+    /**
+     * Zagnieżdżona struktura: grupa „Karty" (powtarzalna) → grupa „Porty"
+     * (powtarzalna, dziecko). Zwraca [parent, child, cardNameField, portNoField].
+     *
+     * @return array{0:AssetSection,1:AssetSection,2:AssetField,3:AssetField}
+     */
+    private function nestedGroups(AssetCategory $category): array
+    {
+        $parent = AssetSection::factory()->forCategory($category)->repeatable()->create([
+            'name' => 'Karty', 'ticket_label' => 'Karta',
+        ]);
+        $cardName = AssetField::factory()->forCategory($category)->create([
+            'asset_section_id' => $parent->id, 'key' => 'card-name', 'name' => 'Nazwa karty', 'type' => AssetFieldType::Text,
+        ]);
+
+        $child = AssetSection::factory()->forCategory($category)->repeatable()->create([
+            'parent_id' => $parent->id, 'name' => 'Porty', 'ticket_label' => 'Port',
+        ]);
+        $portNo = AssetField::factory()->forCategory($category)->create([
+            'asset_section_id' => $child->id, 'key' => 'port-no', 'name' => 'Numer portu', 'type' => AssetFieldType::Text,
+        ]);
+
+        return [$parent, $child, $cardName, $portNo];
+    }
+
+    public function test_create_persists_nested_group_entries_with_parent_links(): void
+    {
+        [$actor, $organization, $category] = $this->actorOrgCategory();
+        [$parent, $child, $cardName, $portNo] = $this->nestedGroups($category);
+
+        $asset = $this->service()->create($actor, [
+            'organization_id' => $organization->id,
+            'asset_category_id' => $category->id,
+            'name' => 'Switch',
+        ], [], [
+            $parent->id => [
+                ['id' => null, 'values' => [$cardName->id => 'Karta A'], 'children' => [
+                    $child->id => [
+                        ['id' => null, 'values' => [$portNo->id => '1']],
+                        ['id' => null, 'values' => [$portNo->id => '2']],
+                    ],
+                ]],
+                ['id' => null, 'values' => [$cardName->id => 'Karta B'], 'children' => [
+                    $child->id => [
+                        ['id' => null, 'values' => [$portNo->id => '9']],
+                    ],
+                ]],
+            ],
+        ]);
+
+        // 2 wpisy-rodzice (parent_entry_id NULL), 3 wpisy-dzieci (z parent_entry_id).
+        $this->assertSame(2, AssetGroupEntry::where('asset_id', $asset->id)
+            ->where('asset_section_id', $parent->id)->whereNull('parent_entry_id')->count());
+        $this->assertSame(3, AssetGroupEntry::where('asset_id', $asset->id)
+            ->where('asset_section_id', $child->id)->whereNotNull('parent_entry_id')->count());
+
+        // Dzieci „Karty A" wskazują dokładnie na jej wpis (poprawne parent_entry_id).
+        $cardA = AssetGroupEntry::where('asset_id', $asset->id)
+            ->where('asset_section_id', $parent->id)
+            ->whereHas('values', fn ($q) => $q->where('asset_field_id', $cardName->id)->where('value', 'Karta A'))
+            ->firstOrFail();
+
+        $this->assertSame(2, AssetGroupEntry::where('parent_entry_id', $cardA->id)->count());
+
+        $this->assertDatabaseHas('asset_group_entry_values', [
+            'asset_field_id' => $portNo->id, 'value' => '2',
+        ]);
+    }
+
+    public function test_removing_parent_entry_cascades_nested_children(): void
+    {
+        [$actor, $organization, $category] = $this->actorOrgCategory();
+        [$parent, $child, $cardName, $portNo] = $this->nestedGroups($category);
+
+        $asset = $this->service()->create($actor, [
+            'organization_id' => $organization->id,
+            'asset_category_id' => $category->id,
+            'name' => 'Switch',
+        ], [], [
+            $parent->id => [
+                ['id' => null, 'values' => [$cardName->id => 'Karta A'], 'children' => [
+                    $child->id => [['id' => null, 'values' => [$portNo->id => '1']]],
+                ]],
+            ],
+        ]);
+
+        $cardA = AssetGroupEntry::where('asset_id', $asset->id)->where('asset_section_id', $parent->id)->firstOrFail();
+        $portEntry = AssetGroupEntry::where('parent_entry_id', $cardA->id)->firstOrFail();
+
+        // Usunięcie rodzica (puste dane grupy najwyższego poziomu) kaskaduje na
+        // wpis-dziecko i jego wartości — bez sierot mimo parent_entry_id nullOnDelete.
+        $this->service()->update($asset, ['name' => 'Switch'], [], $actor, [
+            $parent->id => [],
+        ]);
+
+        $this->assertDatabaseMissing('asset_group_entries', ['id' => $cardA->id]);
+        $this->assertDatabaseMissing('asset_group_entries', ['id' => $portEntry->id]);
+        $this->assertDatabaseMissing('asset_group_entry_values', ['asset_group_entry_id' => $portEntry->id]);
+        $this->assertSame(0, AssetGroupEntry::where('asset_id', $asset->id)->count());
+    }
 }

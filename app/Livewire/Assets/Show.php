@@ -97,19 +97,21 @@ class Show extends Component
         // Wartości pól pojedynczych zasobu.
         $singleValues = $this->asset->fieldValues()->get()->keyBy('asset_field_id');
 
-        // Wpisy grup zasobu (z wartościami), pogrupowane po sekcji.
-        $entriesBySection = $this->asset->groupEntries()
-            ->with('values')
-            ->get()
-            ->groupBy('asset_section_id');
+        // Wszystkie wpisy grup zasobu (z wartościami) — indeks [section][parent ?? 0].
+        $entryIndex = [];
+        foreach ($this->asset->groupEntries()->with('values')->get() as $entry) {
+            $entryIndex[$entry->asset_section_id][$entry->parent_entry_id ?? 0][] = $entry;
+        }
 
-        $map = function (AssetSection $node) use (&$map, $singleValues, $entriesBySection) {
+        $map = function (AssetSection $node) use (&$map, $singleValues, $entryIndex) {
             if ($node->is_repeatable) {
                 return [
                     'section' => $node,
                     'fields' => collect(),
-                    'group' => $this->buildGroupTable($node, $entriesBySection->get($node->id) ?? collect()),
-                    'children' => $node->childNodes->map(fn (AssetSection $c) => $map($c))->values(),
+                    // Zagnieżdżone grupy renderujemy WEWNĄTRZ wpisów (buildGroupView),
+                    // więc childNodes nie powielamy jako rodzeństwo.
+                    'group' => $this->buildGroupView($node, null, 1, $entryIndex),
+                    'children' => collect(),
                 ];
             }
 
@@ -155,17 +157,28 @@ class Show extends Component
     }
 
     /**
-     * Buduje tabelę dla grupy powtarzalnej: kolumny = aktywne pola grupy,
-     * wiersze = wpisy zasobu (po jednym na asset_group_entry).
+     * Buduje REKURENCYJNY widok grupy powtarzalnej dla danego rodzica:
+     *  - 'columns'     => aktywne pola grupy,
+     *  - 'rows'        => wpisy (sort order) z 'cells' oraz 'children' (zagnieżdżone widoki),
+     *  - 'hasChildren' => czy grupa ma zagnieżdżone grupy powtarzalne.
      *
-     * @param  Collection<int,\App\Models\AssetGroupEntry>  $entries
-     * @return array{columns:Collection<int,AssetField>,rows:Collection<int,array<string,mixed>>}
+     * Wpisy dziecka filtrowane po parent_entry_id; rekursja do MAX_GROUP_DEPTH.
+     * Numeracja „#" liczona po POZYCJI w bieżącej liście (w bladzie: $i+1), nie po id.
+     *
+     * @param  array<int,array<int,array<int,\App\Models\AssetGroupEntry>>>  $index
+     * @return array{columns:Collection<int,AssetField>,rows:Collection<int,array<string,mixed>>,hasChildren:bool}
      */
-    protected function buildGroupTable(AssetSection $group, Collection $entries): array
+    protected function buildGroupView(AssetSection $group, ?int $parentEntryId, int $level, array $index): array
     {
         $columns = $group->activeFields;
 
-        $rows = $entries->sortBy('order')->values()->map(function ($entry) use ($columns) {
+        $childGroups = $level < AssetStructure::MAX_GROUP_DEPTH
+            ? $this->structure()->repeatableChildren($group)
+            : collect();
+
+        $entries = collect($index[$group->id][$parentEntryId ?? 0] ?? [])->sortBy('order')->values();
+
+        $rows = $entries->map(function ($entry) use ($columns, $childGroups, $level, $index) {
             $valuesByField = $entry->values->keyBy('asset_field_id');
 
             $cells = [];
@@ -173,12 +186,16 @@ class Show extends Component
                 $cells[$field->id] = $this->castForDisplay($field, $valuesByField->get($field->id)?->value);
             }
 
-            // Kolumna „#" liczona po POZYCJI w bieżącej liście (w bladzie: $i+1), NIE po id wpisu —
-            // dzięki temu po usunięciu wszystkich i dodaniu nowych numeracja zaczyna się od #1.
-            return ['cells' => $cells];
+            $children = $childGroups->map(fn (AssetSection $child) => [
+                'section' => $child,
+                'label' => $child->ticket_label ?: $child->name,
+                'view' => $this->buildGroupView($child, $entry->id, $level + 1, $index),
+            ])->values();
+
+            return ['cells' => $cells, 'children' => $children];
         });
 
-        return ['columns' => $columns, 'rows' => $rows];
+        return ['columns' => $columns, 'rows' => $rows, 'hasChildren' => $childGroups->isNotEmpty()];
     }
 
     /** Rzutuje surową wartość na czytelny tekst wg typu pola. */

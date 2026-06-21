@@ -1,60 +1,85 @@
 {{--
     Rekurencyjny węzeł formularza struktury kategorii.
-    Oczekuje: $node (AssetSection z relacjami childNodes + activeFields), $depth (int).
+    Oczekuje:
+      $node      — AssetSection (childNodes + activeFields),
+      $depth     — int (głębokość wizualna),
+      $rowsBase  — ścieżka WZGLĘDNA do $groups, pod którą leżą kolekcje wierszy grup
+                   tego poziomu ('' = najwyższy poziom; np. '5.0.children' wewnątrz wpisu),
+      $groupLevel — int, poziom zagnieżdżenia grup powtarzalnych (0 = jeszcze poza grupą).
 
-    - Sekcja / podsekcja (is_repeatable = false): renderuje swoje pola jako pojedyncze
-      inputy (model "values.{fieldId}") i rekurencyjnie dzieci.
-    - Grupa powtarzalna (is_repeatable = true): renderuje wiersze wpisów + „+ Dodaj” / „Usuń”.
+    - Sekcja / podsekcja (is_repeatable = false): pola jako pojedyncze inputy
+      (model "values.{fieldId}") + rekurencyjnie dzieci.
+    - Grupa powtarzalna (is_repeatable = true): wiersze wpisów + „+ Dodaj” / „Usuń”,
+      a w każdym wierszu — zagnieżdżone grupy powtarzalne (do MAX_GROUP_DEPTH).
 --}}
+@php($rowsBase = $rowsBase ?? '')
+@php($groupLevel = $groupLevel ?? 0)
+@php($maxDepth = \App\Services\AssetStructure::MAX_GROUP_DEPTH)
+
 <div class="stack" style="gap:12px;{{ $depth > 0 ? 'margin-left:14px;border-left:2px solid var(--border,#eee);padding-left:12px' : '' }}">
     @if ($depth > 0 && ! $node->is_repeatable)
         <div class="muted" style="font-weight:600">{{ $node->name }}</div>
     @endif
 
     @if ($node->is_repeatable)
-        @php($rows = $this->groups[$node->id] ?? [])
+        @php($thisLevel = $groupLevel + 1)
+        @php($rowsPath = $rowsBase === '' ? (string) $node->id : $rowsBase.'.'.$node->id)
+        @php($rows = (array) data_get($this->groups, $rowsPath, []))
         @php($label = $node->ticket_label ?: $node->name)
         @php($max = $node->max_entries)
         @php($min = $node->min_entries ?? 0)
+        @php($childGroups = $thisLevel < $maxDepth ? $node->childNodes->where('is_repeatable', true) : collect())
 
-        <div wire:key="group-{{ $node->id }}">
+        <div wire:key="group-{{ $rowsPath }}">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
                 <strong>{{ $depth > 0 ? $node->name : '' }}</strong>
                 <button type="button" class="btn btn--ghost btn--sm"
-                        wire:click="addRow({{ $node->id }})"
+                        wire:click="addRow('{{ $rowsPath }}')"
                         @disabled($max !== null && count($rows) >= $max)>
                     + Dodaj {{ $label }}
                 </button>
             </div>
 
-            @error('groups.'.$node->id) <p class="error" style="margin:0 0 10px">{{ $message }}</p> @enderror
+            @error('groups.'.$rowsPath) <p class="error" style="margin:0 0 10px">{{ $message }}</p> @enderror
 
             @if (empty($rows))
                 <p class="muted" style="margin:0">Brak wpisów. Użyj „+ Dodaj {{ $label }}”, aby dodać.</p>
             @else
                 <div class="stack" style="gap:14px">
                     @foreach ($rows as $index => $row)
-                        <div class="card" style="background:transparent" wire:key="group-{{ $node->id }}-row-{{ $index }}">
+                        <div class="card" style="background:transparent" wire:key="group-{{ $rowsPath }}-row-{{ $index }}">
                             <div class="card__body">
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                                     <strong class="muted">{{ $label }} #{{ $index + 1 }}</strong>
                                     <button type="button" class="btn btn--ghost btn--sm"
-                                            wire:click="removeRow({{ $node->id }}, {{ $index }})"
+                                            wire:click="removeRow('{{ $rowsPath }}', {{ $index }})"
                                             @disabled(count($rows) <= $min)>
                                         Usuń
                                     </button>
                                 </div>
 
-                                <div class="form-grid">
-                                    @foreach ($node->activeFields as $field)
-                                        @include('livewire.assets._field', [
-                                            'field' => $field,
-                                            'model' => 'groups.'.$node->id.'.'.$index.'.values.'.$field->id,
-                                            'key' => 'groups.'.$node->id.'.'.$index.'.values.'.$field->id,
-                                            'id' => 'g'.$node->id.'_r'.$index.'_f'.$field->id,
-                                        ])
-                                    @endforeach
-                                </div>
+                                @if ($node->activeFields->isNotEmpty())
+                                    <div class="form-grid">
+                                        @foreach ($node->activeFields as $field)
+                                            @include('livewire.assets._field', [
+                                                'field' => $field,
+                                                'model' => 'groups.'.$rowsPath.'.'.$index.'.values.'.$field->id,
+                                                'key' => 'groups.'.$rowsPath.'.'.$index.'.values.'.$field->id,
+                                                'id' => 'g'.str_replace('.', '_', $rowsPath).'_r'.$index.'_f'.$field->id,
+                                            ])
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                {{-- Zagnieżdżone grupy powtarzalne tego wpisu (do MAX_GROUP_DEPTH). --}}
+                                @foreach ($childGroups as $child)
+                                    @include('livewire.assets._form-section', [
+                                        'node' => $child,
+                                        'depth' => $depth + 1,
+                                        'rowsBase' => $rowsPath.'.'.$index.'.children',
+                                        'groupLevel' => $thisLevel,
+                                    ])
+                                @endforeach
                             </div>
                         </div>
                     @endforeach
@@ -76,7 +101,12 @@
         @endif
 
         @foreach ($node->childNodes as $child)
-            @include('livewire.assets._form-section', ['node' => $child, 'depth' => $depth + 1])
+            @include('livewire.assets._form-section', [
+                'node' => $child,
+                'depth' => $depth + 1,
+                'rowsBase' => $rowsBase,
+                'groupLevel' => $groupLevel,
+            ])
         @endforeach
     @endif
 </div>

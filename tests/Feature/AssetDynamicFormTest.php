@@ -337,4 +337,60 @@ class AssetDynamicFormTest extends TestCase
 
         Livewire::test(ManageForm::class)->assertForbidden();
     }
+
+    /**
+     * Zagnieżdżona struktura: grupa „Karty" (powtarzalna) → grupa „Porty"
+     * (powtarzalna, dziecko).
+     *
+     * @return array{0:AssetSection,1:AssetSection,2:AssetField,3:AssetField}
+     */
+    private function nestedGroups(AssetCategory $category): array
+    {
+        $parent = AssetSection::factory()->forCategory($category)->repeatable()->create([
+            'name' => 'Karty', 'ticket_label' => 'Karta',
+        ]);
+        $cardName = AssetField::factory()->forCategory($category)->create([
+            'asset_section_id' => $parent->id, 'key' => 'card-name', 'name' => 'Nazwa karty', 'type' => AssetFieldType::Text,
+        ]);
+
+        $child = AssetSection::factory()->forCategory($category)->repeatable()->create([
+            'parent_id' => $parent->id, 'name' => 'Porty', 'ticket_label' => 'Port',
+        ]);
+        $portNo = AssetField::factory()->forCategory($category)->create([
+            'asset_section_id' => $child->id, 'key' => 'port-no', 'name' => 'Numer portu', 'type' => AssetFieldType::Text,
+        ]);
+
+        return [$parent, $child, $cardName, $portNo];
+    }
+
+    public function test_nested_group_add_by_path_and_save_with_parent_links(): void
+    {
+        [$support, $organization, $category] = $this->staffOrgCategory();
+        [$parent, $child, $cardName, $portNo] = $this->nestedGroups($category);
+        $this->actingAs($support);
+
+        Livewire::test(ManageForm::class)
+            ->set('organization_id', $organization->id)
+            ->set('asset_category_id', $category->id)
+            ->set('name', 'Switch')
+            ->call('addRow', (string) $parent->id)
+            ->set('groups.'.$parent->id.'.0.values.'.$cardName->id, 'Karta A')
+            ->call('addRow', $parent->id.'.0.children.'.$child->id)
+            ->set('groups.'.$parent->id.'.0.children.'.$child->id.'.0.values.'.$portNo->id, 'P1')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $asset = $organization->assets()->where('name', 'Switch')->firstOrFail();
+
+        $cardA = AssetGroupEntry::where('asset_id', $asset->id)
+            ->where('asset_section_id', $parent->id)->firstOrFail();
+        $port = AssetGroupEntry::where('asset_id', $asset->id)
+            ->where('asset_section_id', $child->id)->firstOrFail();
+
+        $this->assertNull($cardA->parent_entry_id);
+        $this->assertSame($cardA->id, $port->parent_entry_id);
+        $this->assertDatabaseHas('asset_group_entry_values', [
+            'asset_group_entry_id' => $port->id, 'asset_field_id' => $portNo->id, 'value' => 'P1',
+        ]);
+    }
 }

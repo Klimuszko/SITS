@@ -210,55 +210,76 @@ class AssetService
     }
 
     /**
-     * Uzgadnia wpisy grup powtarzalnych zasobu z przesłanym zestawem ($groupData):
-     *  - nowe wiersze (bez id) → tworzy,
-     *  - istniejące (z id) → aktualizuje, po sprawdzeniu WŁASNOŚCI
-     *    (entry.asset_id == asset && entry.asset_section_id == ta grupa),
-     *  - wpisy nieobecne w zestawie → usuwa (kaskada wartości przez FK),
+     * Uzgadnia wpisy grup powtarzalnych zasobu z przesłanym zestawem ($groupData),
+     * REKURENCYJNIE dla grup zagnieżdżonych (do AssetStructure::MAX_GROUP_DEPTH):
+     *  - nowe wiersze (bez id) → tworzy (z parent_entry_id dla zagnieżdżonych),
+     *  - istniejące (z id) → aktualizuje po sprawdzeniu WŁASNOŚCI (asset_id,
+     *    asset_section_id ORAZ parent_entry_id zgodne z bieżącym poziomem),
+     *  - wpisy nieobecne w zestawie → usuwa wraz z poddrzewem (deleteEntryTree),
      *  - `order` z pozycji w tablicy.
      *
-     * Przetwarza WYŁĄCZNIE aktywne sekcje powtarzalne należące do kategorii zasobu;
-     * nieznane/obce asset_section_id są ignorowane. Obce id wpisów są pomijane
-     * (traktowane jak nowy wiersz nie jest — wiersz jest po prostu pomijany).
-     *
-     * @param  array<int,array<int,array{id?:int|null,values:array<int,mixed>}>>  $groupData
-     * @return bool  czy cokolwiek zmieniono (utworzono / zaktualizowano / usunięto)
+     * @param  array<int,array<int,array{id?:int|null,values:array<int,mixed>,children?:array<int,mixed>}>>  $groupData
+     * @return bool  czy cokolwiek zmieniono
      */
     protected function reconcileGroups(Asset $asset, array $groupData): bool
     {
-        $groups = $this->categoryRepeatableSections($asset);
+        $category = $asset->category;
 
-        if ($groups->isEmpty()) {
+        if ($category === null) {
             return false;
         }
 
+        $structure = app(AssetStructure::class);
+        $topGroups = $structure->topRepeatableGroups($category);
+
+        if ($topGroups->isEmpty()) {
+            return false;
+        }
+
+        return $this->reconcileGroupLevel($asset, $topGroups, null, $groupData, 1, $structure);
+    }
+
+    /**
+     * Jeden poziom rekonsyliacji wpisów grup dla danego rodzica (parent_entry_id).
+     *
+     * @param  Collection<int,AssetSection>  $groups
+     * @param  array<int,mixed>              $levelData
+     */
+    protected function reconcileGroupLevel(Asset $asset, Collection $groups, ?int $parentEntryId, array $levelData, int $level, AssetStructure $structure): bool
+    {
         $changed = false;
 
         foreach ($groups as $section) {
-            $rows = $groupData[$section->id] ?? [];
-            $fields = $section->relationLoaded('activeFields')
-                ? $section->getRelation('activeFields')
-                : $this->sectionFields($section->id);
+            $rows = $levelData[$section->id] ?? [];
+            $fields = $section->activeFields;
 
-            // Istniejące wpisy tej grupy dla tego zasobu (źródło prawdy własności).
+            // Istniejące wpisy tej grupy dla tego zasobu i tego rodzica (własność).
             $existing = AssetGroupEntry::query()
                 ->where('asset_id', $asset->id)
                 ->where('asset_section_id', $section->id)
+                ->when(
+                    $parentEntryId === null,
+                    fn ($q) => $q->whereNull('parent_entry_id'),
+                    fn ($q) => $q->where('parent_entry_id', $parentEntryId),
+                )
                 ->get()
                 ->keyBy('id');
 
             $keptIds = [];
 
-            foreach (array_values($rows) as $index => $row) {
+            foreach (array_values(is_array($rows) ? $rows : []) as $index => $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+
                 $entryId = $row['id'] ?? null;
                 $values = $row['values'] ?? [];
+                $childData = $row['children'] ?? [];
 
                 if ($entryId !== null) {
-                    // Aktualizacja istniejącego — tylko jeśli należy do tego zasobu i tej grupy.
                     $entry = $existing->get((int) $entryId);
                     if ($entry === null) {
-                        // Obce / nieistniejące id — pomijamy (ochrona własności).
-                        continue;
+                        continue; // obce / nieistniejące / spoza tego rodzica — pomijamy
                     }
 
                     if ($entry->order !== $index) {
@@ -270,6 +291,7 @@ class AssetService
                     $entry = AssetGroupEntry::create([
                         'asset_id' => $asset->id,
                         'asset_section_id' => $section->id,
+                        'parent_entry_id' => $parentEntryId,
                         'order' => $index,
                     ]);
                     $changed = true;
@@ -277,23 +299,42 @@ class AssetService
 
                 $keptIds[] = $entry->id;
 
-                if ($this->persistGroupEntryValues($entry, $fields, $values)) {
+                if ($this->persistGroupEntryValues($entry, $fields, is_array($values) ? $values : [])) {
                     $changed = true;
+                }
+
+                // Zagnieżdżone grupy powtarzalne tego wpisu (do MAX_GROUP_DEPTH).
+                if ($level < AssetStructure::MAX_GROUP_DEPTH) {
+                    $childGroups = $structure->repeatableChildren($section);
+                    if ($childGroups->isNotEmpty()
+                        && $this->reconcileGroupLevel($asset, $childGroups, $entry->id, is_array($childData) ? $childData : [], $level + 1, $structure)) {
+                        $changed = true;
+                    }
                 }
             }
 
-            // Usuwamy wpisy, których nie ma w przesłanym zestawie. Wartości kasujemy
-            // jawnie (nie polegamy na kaskadzie FK — sqlite w testach bywa bez pragm).
+            // Wpisy nieobecne w zestawie → usuwamy wraz z poddrzewem (parent_entry_id
+            // ma nullOnDelete, więc dzieci kasujemy jawnie, by nie osierocić wpisów).
             foreach ($existing as $id => $entry) {
                 if (! in_array($id, $keptIds, true)) {
-                    AssetGroupEntryValue::where('asset_group_entry_id', $entry->id)->delete();
-                    $entry->delete();
+                    $this->deleteEntryTree($entry);
                     $changed = true;
                 }
             }
         }
 
         return $changed;
+    }
+
+    /** Rekurencyjnie usuwa wpis grupy: najpierw dzieci, potem wartości, na końcu wpis. */
+    protected function deleteEntryTree(AssetGroupEntry $entry): void
+    {
+        foreach ($entry->children()->get() as $child) {
+            $this->deleteEntryTree($child);
+        }
+
+        AssetGroupEntryValue::where('asset_group_entry_id', $entry->id)->delete();
+        $entry->delete();
     }
 
     /**
@@ -342,34 +383,6 @@ class AssetService
             ->where('is_active', true)
             ->orderBy('order')
             ->get();
-    }
-
-    /** Aktywne sekcje powtarzalne kategorii zasobu, z dociążonymi aktywnymi polami. */
-    protected function categoryRepeatableSections(Asset $asset): Collection
-    {
-        return AssetSection::query()
-            ->where('asset_category_id', $asset->asset_category_id)
-            ->where('is_active', true)
-            ->where('is_repeatable', true)
-            ->orderBy('order')
-            ->get()
-            ->map(function (AssetSection $section) {
-                $section->setRelation('activeFields', $this->sectionFields($section->id));
-
-                return $section;
-            });
-    }
-
-    /** Aktywne, renderowalne pola danej sekcji (pomija file/relation). */
-    protected function sectionFields(int $sectionId): Collection
-    {
-        return AssetField::query()
-            ->where('asset_section_id', $sectionId)
-            ->where('is_active', true)
-            ->orderBy('order')
-            ->get()
-            ->reject(fn (AssetField $f) => in_array($f->type, AssetStructure::SKIPPED_TYPES, true))
-            ->values();
     }
 
     /** Normalizuje surową wartość do stringa zgodnie z typem pola. */
