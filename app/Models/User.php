@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Enums\OrgRole;
+use App\Enums\Permission;
 use App\Enums\Role;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -22,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'access_profile_id',
         'phone',
         'is_active',
     ];
@@ -48,6 +51,12 @@ class User extends Authenticatable
     public function memberships(): HasMany
     {
         return $this->hasMany(OrganizationMembership::class);
+    }
+
+    /** Globalny profil dostępu (personel). Klient czerpie profil z członkostwa. */
+    public function accessProfile(): BelongsTo
+    {
+        return $this->belongsTo(AccessProfile::class);
     }
 
     /** Organizacje, których użytkownik jest członkiem (klient). */
@@ -165,6 +174,48 @@ class User extends Authenticatable
             ->where('is_active', true)
             ->where('role', OrgRole::Manager)
             ->isNotEmpty();
+    }
+
+    /**
+     * Czy użytkownik ma dane uprawnienie (warstwa „CO"). Zakres „GDZIE" (per
+     * organizacja) rozstrzygają Policy/scope — tu sprawdzamy samą zdolność:
+     *  - Super Admin → zawsze true (spójnie z Gate::before),
+     *  - personel → uprawnienia z globalnego profilu (users.access_profile_id),
+     *  - klient → uprawnienia z profilu członkostwa w organizacji $context;
+     *    bez kontekstu organizacji klient nie ma żadnej globalnej zdolności.
+     *
+     * $context: null | int (id organizacji) | Organization | model z organization_id.
+     */
+    public function hasPermission(string|Permission $permission, mixed $context = null): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $key = $permission instanceof Permission ? $permission->value : $permission;
+
+        if ($this->isStaff()) {
+            return $this->accessProfile?->grants($key) ?? false;
+        }
+
+        $organizationId = $this->resolveOrganizationId($context);
+        if ($organizationId === null) {
+            return false;
+        }
+
+        return $this->membershipFor($organizationId)?->accessProfile?->grants($key) ?? false;
+    }
+
+    /** Wyłuskuje id organizacji z kontekstu uprawnienia (lub null). */
+    protected function resolveOrganizationId(mixed $context): ?int
+    {
+        return match (true) {
+            $context === null => null,
+            is_int($context) => $context,
+            $context instanceof Organization => $context->id,
+            is_object($context) && isset($context->organization_id) => (int) $context->organization_id,
+            default => null,
+        };
     }
 
     /** Czy support jest przypisany (aktywnie) do organizacji. */

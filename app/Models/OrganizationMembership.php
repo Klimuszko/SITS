@@ -16,6 +16,7 @@ class OrganizationMembership extends Model
         'user_id',
         'organization_id',
         'role',
+        'access_profile_id',
         'manager_scope',
         'is_active',
     ];
@@ -37,6 +38,12 @@ class OrganizationMembership extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /** Profil dostępu klienta w obrębie tej organizacji (warstwa „CO"). */
+    public function accessProfile(): BelongsTo
+    {
+        return $this->belongsTo(AccessProfile::class);
     }
 
     public function isManager(): bool
