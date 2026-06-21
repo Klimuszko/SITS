@@ -56,8 +56,12 @@
                     </div>
 
                     <div class="field">
-                        <label for="password">Hasło {{ $user ? '' : '*' }}
-                            @if ($user)<span class="hint">— zostaw puste, aby nie zmieniać</span>@endif
+                        <label for="password">Hasło
+                            @if ($user)
+                                <span class="hint">— zostaw puste, aby nie zmieniać</span>
+                            @else
+                                <span class="hint">— puste = wyślij zaproszenie z linkiem do ustawienia hasła</span>
+                            @endif
                         </label>
                         <input id="password" type="password" class="input" wire:model="password" autocomplete="new-password">
                         @error('password') <span class="error">{{ $message }}</span> @enderror

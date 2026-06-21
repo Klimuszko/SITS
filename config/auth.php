@@ -28,6 +28,15 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        // Zaproszenia: link „ustaw hasło" przy pierwszym logowaniu. Dłuższe okno
+        // (7 dni) niż zwykły reset; ta sama tabela tokenów, token jednorazowy.
+        'invitations' => [
+            'provider' => 'users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 10080,
+            'throttle' => 0,
+        ],
     ],
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),

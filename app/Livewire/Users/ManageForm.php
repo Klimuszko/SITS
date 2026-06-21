@@ -10,8 +10,11 @@ use App\Models\AccessProfile;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\User;
+use App\Notifications\AccountInvitationNotification;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -116,11 +119,9 @@ class ManageForm extends Component
             'role' => ['required', Rule::in($this->allowedRoleValues())],
             'phone' => ['nullable', 'string', 'max:50'],
             'is_active' => ['boolean'],
-            // Tworzenie: hasło wymagane; edycja: opcjonalne (puste = bez zmiany).
-            'password' => [
-                $this->user && $this->user->exists ? 'nullable' : 'required',
-                'string', 'min:8', 'confirmed',
-            ],
+            // Hasło zawsze opcjonalne: puste przy tworzeniu = konto z zaproszeniem
+            // (użytkownik ustawi hasło z linku); puste przy edycji = bez zmiany.
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             // Globalny profil musi być profilem personelu (dla klienta i tak zerowany).
             'access_profile_id' => [
                 'nullable', 'integer',
@@ -152,8 +153,11 @@ class ManageForm extends Component
 
         $data = $this->validate();
 
-        DB::transaction(function () use ($data) {
-            $isNew = ! ($this->user && $this->user->exists);
+        $isNew = ! ($this->user && $this->user->exists);
+        // Nowe konto bez hasła = zaproszenie e-mail (link „ustaw hasło").
+        $wantsInvite = $isNew && blank($data['password']);
+
+        DB::transaction(function () use ($data, $isNew) {
             $target = $this->user ?? new User();
             $oldRole = $isNew ? null : $target->role;
 
@@ -168,9 +172,13 @@ class ManageForm extends Component
                 ? ($data['access_profile_id'] ?? null)
                 : null;
 
-            // Hasło: ustawiamy tylko gdy podano (cast 'hashed' zahashuje automatycznie — bez podwójnego hashowania).
+            // Hasło: gdy podane — ustawiamy (cast 'hashed' zahashuje). Gdy puste przy
+            // tworzeniu — losowy, NIEUŻYWALNY placeholder; prawdziwe hasło ustawi sam
+            // użytkownik z linku zaproszenia (nic nie generujemy dla niego ani nie wysyłamy).
             if (filled($data['password'])) {
                 $target->password = $data['password'];
+            } elseif ($isNew) {
+                $target->password = Str::password(40);
             }
 
             if ($isNew) {
@@ -199,7 +207,16 @@ class ManageForm extends Component
             $this->user = $target;
         });
 
-        session()->flash('status', 'Zapisano użytkownika.');
+        // Zaproszenie wysyłamy PO commit transakcji (token w password_reset_tokens
+        // + kolejkowany e-mail). Link „ustaw hasło" — bez hasła w treści.
+        if ($wantsInvite) {
+            $token = Password::broker('invitations')->createToken($this->user);
+            $this->user->notify(new AccountInvitationNotification($token));
+        }
+
+        session()->flash('status', $wantsInvite
+            ? 'Utworzono konto — wysłano e-mail z linkiem do ustawienia hasła.'
+            : 'Zapisano użytkownika.');
         $this->redirectRoute('users.edit', ['user' => $this->user->id], navigate: true);
     }
 

@@ -13,6 +13,7 @@ use App\Livewire\Assets\ManageForm as AssetForm;
 use App\Livewire\Assets\Show as AssetShow;
 use App\Livewire\Audit\Index as AuditIndex;
 use App\Livewire\Auth\Login;
+use App\Livewire\Auth\SetPassword;
 use App\Livewire\Dashboard;
 use App\Livewire\Dictionaries\KnowledgeCategories as DictionaryKnowledgeCategories;
 use App\Livewire\Dictionaries\TicketCategories as DictionaryTicketCategories;
@@ -43,6 +44,8 @@ Route::get('/', HomeController::class);
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');
+    // Ustawienie hasła z linku zaproszenia (token jednorazowy, broker „invitations").
+    Route::get('/ustaw-haslo/{token}', SetPassword::class)->name('password.set');
 });
 
 Route::post('/logout', LogoutController::class)->name('logout')->middleware('auth');
