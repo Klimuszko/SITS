@@ -185,4 +185,39 @@ class AccessProfileTest extends TestCase
         $this->assertFalse($admin->can('force-delete'));
         $this->assertTrue(User::factory()->superAdmin()->create()->can('force-delete'));
     }
+
+    public function test_custom_profile_overrides_role_defaults(): void
+    {
+        // Profil DODAJE uprawnienie ponad domyślny zestaw roli (support + audyt).
+        $auditor = AccessProfile::create([
+            'key' => 'support-auditor',
+            'name' => 'Support + audyt',
+            'applies_to' => AccessProfile::APPLIES_STAFF,
+            'is_system' => false,
+            'is_active' => true,
+            'permissions' => array_merge(
+                AccessProfile::defaultPermissionsForRole(Role::Support),
+                [Permission::AuditView->value],
+            ),
+        ]);
+        $support = User::factory()->support()->create(['access_profile_id' => $auditor->id]);
+
+        $this->assertTrue($support->can('view-audit'));                          // dodane przez profil
+        $this->assertTrue($support->hasPermission(Permission::TicketsManage));   // nadal z zestawu support
+
+        // Profil ODBIERA uprawnienie poniżej domyślnego zestawu (admin bez słowników).
+        $reduced = AccessProfile::create([
+            'key' => 'admin-lite',
+            'name' => 'Admin ograniczony',
+            'applies_to' => AccessProfile::APPLIES_STAFF,
+            'is_system' => false,
+            'is_active' => true,
+            'permissions' => [Permission::AuditView->value],
+        ]);
+        $admin = User::factory()->admin()->create(['access_profile_id' => $reduced->id]);
+
+        $this->assertTrue($admin->can('view-audit'));
+        $this->assertFalse($admin->can('manage-categories'));   // ograniczone przez profil
+        $this->assertFalse($admin->can('manage-users'));
+    }
 }

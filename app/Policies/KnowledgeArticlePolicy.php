@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Permission;
 use App\Models\KnowledgeArticle;
 use App\Models\User;
 use App\Services\KnowledgeVisibilityService;
@@ -20,22 +21,28 @@ class KnowledgeArticlePolicy
         return $this->visibility->canView($user, $article);
     }
 
-    /** Tworzyć/edytować mogą admin i support (z uprawnieniem). */
+    /** Tworzyć artykuły mogą profile z knowledge.create (domyślnie admin i support). */
     public function create(User $user): bool
     {
-        return $user->isAdminLevel() || $user->isSupport();
+        return $user->hasPermission(Permission::KnowledgeCreate);
     }
 
+    /**
+     * Edycja: wymaga knowledge.manage. Admin edytuje dowolny artykuł; pozostali
+     * (np. support) tylko własne (author_id) — rozróżnienie rekordu zostaje tutaj.
+     */
     public function update(User $user, KnowledgeArticle $article): bool
     {
-        return $user->isAdminLevel()
-            || ($user->isSupport() && $article->author_id === $user->id)
-            || $user->isAdmin();
+        if (! $user->hasPermission(Permission::KnowledgeManage)) {
+            return false;
+        }
+
+        return $user->isAdminLevel() || $article->author_id === $user->id;
     }
 
-    /** Zmiana widoczności artykułu (audytowane). */
+    /** Zmiana widoczności artykułu (audytowane) – knowledge.manage. */
     public function changeVisibility(User $user, KnowledgeArticle $article): bool
     {
-        return $user->isAdminLevel() || $user->isSupport();
+        return $user->hasPermission(Permission::KnowledgeManage);
     }
 }

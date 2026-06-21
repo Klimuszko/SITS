@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Permission;
 use App\Models\Organization;
 use App\Models\User;
 
@@ -15,35 +16,33 @@ class OrganizationPolicy
 
     public function view(User $user, Organization $organization): bool
     {
-        if ($user->isAdminLevel()) {
-            return true;
+        if ($user->isStaff()) {
+            return $user->hasPermission(Permission::OrganizationsView, $organization)
+                && $user->reachesOrganization($organization->id);
         }
 
-        if ($user->isSupport()) {
-            return $user->supportsOrganization($organization->id);
-        }
-
-        return $user->isMemberOf($organization->id);
+        // Klient: członek z organizations.view.
+        return $user->hasPermission(Permission::OrganizationsView, $organization);
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdminLevel();
+        return $user->hasPermission(Permission::OrganizationsManage);
     }
 
     public function update(User $user, Organization $organization): bool
     {
-        return $user->isAdminLevel();
+        return $user->hasPermission(Permission::OrganizationsManage);
     }
 
     public function archive(User $user, Organization $organization): bool
     {
-        return $user->isAdminLevel();
+        return $user->hasPermission(Permission::OrganizationsManage);
     }
 
     /** Przypisywanie supportu do organizacji. */
     public function assignSupport(User $user, Organization $organization): bool
     {
-        return $user->isAdminLevel();
+        return $user->hasPermission(Permission::OrganizationsManage);
     }
 }

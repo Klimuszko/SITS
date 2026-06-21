@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Permission;
 use App\Models\Asset;
 use App\Models\User;
 
@@ -14,42 +15,35 @@ class AssetPolicy
 
     public function view(User $user, Asset $asset): bool
     {
-        if ($user->isAdminLevel()) {
-            return true;
+        if ($user->isStaff()) {
+            return $user->hasPermission(Permission::AssetsView, $asset)
+                && $user->reachesOrganization($asset->organization_id);
         }
 
-        if ($user->isSupport()) {
-            return $user->supportsOrganization($asset->organization_id);
-        }
-
-        // Manager zawsze widzi wszystkie zasoby swojej organizacji.
-        if ($user->isManagerOf($asset->organization_id)) {
-            return true;
-        }
-
-        // User: musi być członkiem organizacji.
-        if (! $user->isMemberOf($asset->organization_id)) {
+        // Klient: musi mieć assets.view w swojej organizacji (manager/user).
+        if (! $user->hasPermission(Permission::AssetsView, $asset)) {
             return false;
         }
 
-        // Zasób prywatny – tylko przypisani użytkownicy.
+        // Zasób prywatny – tylko manager organizacji lub przypisani użytkownicy.
         if ($asset->is_private) {
-            return $asset->assignedUsers->contains('id', $user->id);
+            return $user->isManagerOf($asset->organization_id)
+                || $asset->assignedUsers->contains('id', $user->id);
         }
 
         return true;
     }
 
-    /** Tworzenie/edycja/archiwizacja zasobów – personel obsługujący organizację. */
+    /** Tworzenie zasobów – personel z uprawnieniem (bez kontekstu organizacji). */
     public function create(User $user): bool
     {
-        return $user->isAdminLevel() || $user->isSupport();
+        return $user->hasPermission(Permission::AssetsCreate);
     }
 
     public function update(User $user, Asset $asset): bool
     {
-        return $user->isAdminLevel()
-            || ($user->isSupport() && $user->supportsOrganization($asset->organization_id));
+        return $user->hasPermission(Permission::AssetsUpdate)
+            && $user->reachesOrganization($asset->organization_id);
     }
 
     public function archive(User $user, Asset $asset): bool

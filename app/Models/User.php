@@ -177,6 +177,20 @@ class User extends Authenticatable
     }
 
     /**
+     * Zasięg personelu na organizację (warstwa „GDZIE"): admin/super_admin —
+     * wszystkie organizacje; support — tylko przypisane; klient — brak (dostęp
+     * klienta wynika z członkostwa, nie z tego zasięgu).
+     */
+    public function reachesOrganization(int $organizationId): bool
+    {
+        return match (true) {
+            $this->isAdminLevel() => true,
+            $this->isSupport() => $this->supportsOrganization($organizationId),
+            default => false,
+        };
+    }
+
+    /**
      * Czy użytkownik ma dane uprawnienie (warstwa „CO"). Zakres „GDZIE" (per
      * organizacja) rozstrzygają Policy/scope — tu sprawdzamy samą zdolność:
      *  - Super Admin → zawsze true (spójnie z Gate::before),
