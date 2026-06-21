@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuditArchiveController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\KnowledgeImageController;
@@ -48,6 +49,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');
     // Ustawienie hasła z linku zaproszenia (token jednorazowy, broker „invitations").
     Route::get('/ustaw-haslo/{token}', SetPassword::class)->name('password.set');
+
+    // Logowanie SSO (Microsoft/Google). 404, gdy provider wyłączony/nieskonfigurowany.
+    Route::get('/auth/{provider}/redirect', [SsoController::class, 'redirect'])->name('auth.redirect');
+    Route::get('/auth/{provider}/callback', [SsoController::class, 'callback'])->name('auth.callback');
 });
 
 Route::post('/logout', LogoutController::class)->name('logout')->middleware('auth');

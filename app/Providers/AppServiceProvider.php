@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,5 +26,10 @@ class AppServiceProvider extends ServiceProvider
         // Własny, lekki widok paginacji (bez Tailwinda).
         Paginator::defaultView('pagination.default');
         Paginator::defaultSimpleView('pagination.default');
+
+        // Rejestracja dostawcy Microsoft/Entra dla Socialite (Google jest wbudowany).
+        Event::listen(SocialiteWasCalled::class, function (SocialiteWasCalled $event) {
+            $event->extendSocialite('microsoft', \SocialiteProviders\Microsoft\Provider::class);
+        });
     }
 }

@@ -34,4 +34,17 @@
             <span wire:loading wire:target="login">Logowanie…</span>
         </button>
     </form>
+
+    @php ($ssoProviders = \App\Support\Sso::enabled())
+    @if (! empty($ssoProviders))
+        <div class="muted" style="text-align:center;margin:16px 0 8px;font-size:13px">lub zaloguj się przez</div>
+        <div class="stack" style="gap:8px">
+            @foreach ($ssoProviders as $provider)
+                {{-- Pełne przekierowanie do dostawcy (bez wire:navigate). --}}
+                <a href="{{ route('auth.redirect', $provider['key']) }}" class="btn btn--ghost" style="justify-content:center">
+                    Zaloguj przez {{ $provider['label'] }}
+                </a>
+            @endforeach
+        </div>
+    @endif
 </div>
