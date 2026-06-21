@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 
 /**
  * Ustawienia aplikacji jako prosta tabela klucz-wartość (key/value).
@@ -45,5 +47,30 @@ class Setting extends Model
         static::updateOrCreate(['key' => $key], ['value' => $value]);
 
         Cache::forget(self::CACHE_KEY);
+    }
+
+    /**
+     * Zapis wartości WRAŻLIWEJ (np. OAuth client secret) — szyfrowanej w spoczynku
+     * przez APP_KEY. Pusta wartość zapisuje NULL (czyści).
+     */
+    public static function setEncrypted(string $key, ?string $value): void
+    {
+        self::set($key, ($value === null || $value === '') ? null : Crypt::encryptString($value));
+    }
+
+    /** Odczyt wartości wrażliwej (deszyfracja). Uszkodzony/pusty payload → $default. */
+    public static function getEncrypted(string $key, $default = null)
+    {
+        $raw = self::get($key);
+
+        if ($raw === null || $raw === '') {
+            return $default;
+        }
+
+        try {
+            return Crypt::decryptString($raw);
+        } catch (DecryptException) {
+            return $default;
+        }
     }
 }

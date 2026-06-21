@@ -5,6 +5,8 @@
         </x-slot:actions>
     </x-page-header>
 
+    @include('livewire.settings._nav')
+
     <form wire:submit="save" enctype="multipart/form-data">
         <x-section title="Marka i motyw" description="Jak prezentowana jest marka w pasku górnym oraz jaki motyw widzi nowy użytkownik." card>
             <div class="form-grid">

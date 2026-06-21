@@ -28,6 +28,7 @@ use App\Livewire\Organizations\ManageForm as OrganizationForm;
 use App\Livewire\Profile\Edit as ProfileEdit;
 use App\Livewire\Settings\AccessProfiles as SettingsAccessProfiles;
 use App\Livewire\Settings\Branding as SettingsBranding;
+use App\Livewire\Settings\Sso as SettingsSso;
 use App\Livewire\Tickets\Create as TicketCreate;
 use App\Livewire\Tickets\Index as TicketIndex;
 use App\Livewire\Tickets\Show as TicketShow;
@@ -150,5 +151,6 @@ Route::middleware('auth')->group(function () {
 
     // Ustawienia brandingu (admin). Autoryzacja w mount() przez bramkę access-admin.
     Route::get('/ustawienia/branding', SettingsBranding::class)->name('settings.branding');
+    Route::get('/ustawienia/logowanie', SettingsSso::class)->name('settings.sso');
     Route::get('/ustawienia/profile-dostepu', SettingsAccessProfiles::class)->name('settings.access-profiles');
 });
