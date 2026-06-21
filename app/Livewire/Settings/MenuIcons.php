@@ -101,6 +101,7 @@ class MenuIcons extends Component
             'clipboard' => 'Prace administracyjne + kategoria Praca',
             'sliders' => 'Słowniki',
             'shield' => 'Audyt',
+            'key' => 'Profile dostępu',
             'settings' => 'Ustawienia + kategoria Administracja',
             'life-ring' => 'Kategoria Wsparcie',
             'chevron-left' => 'Przycisk zwijania menu',
