@@ -2,6 +2,7 @@
     <x-page-header title="Użytkownicy" description="Konta personelu i klientów oraz ich członkostwa w organizacjach.">
         @can('create', App\Models\User::class)
             <x-slot:actions>
+                <a href="{{ route('users.invite') }}" wire:navigate class="btn btn--ghost">Zaproś (masowo)</a>
                 <a href="{{ route('users.create') }}" wire:navigate class="btn btn--primary">+ Nowy użytkownik</a>
             </x-slot:actions>
         @endcan

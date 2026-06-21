@@ -32,6 +32,7 @@ use App\Livewire\Tickets\Create as TicketCreate;
 use App\Livewire\Tickets\Index as TicketIndex;
 use App\Livewire\Tickets\Show as TicketShow;
 use App\Livewire\Users\Index as UserIndex;
+use App\Livewire\Users\Invite as UserInvite;
 use App\Livewire\Users\ManageForm as UserForm;
 use App\Livewire\WorkLogs\Index as WorkLogIndex;
 use App\Livewire\WorkLogs\ManageForm as WorkLogForm;
@@ -111,6 +112,7 @@ Route::middleware('auth')->group(function () {
     // /nowy przed /{user}, żeby nie został przechwycony jako parametr.
     Route::get('/uzytkownicy', UserIndex::class)->name('users.index');
     Route::get('/uzytkownicy/nowy', UserForm::class)->name('users.create');
+    Route::get('/uzytkownicy/zapros', UserInvite::class)->name('users.invite');
     Route::get('/uzytkownicy/{user}/edycja', UserForm::class)->name('users.edit');
 
     // Słowniki administracyjne (kategorie/priorytety). Autoryzacja w mount()
