@@ -239,8 +239,10 @@ a:hover { text-decoration: underline; }
 
 .sidebar__backdrop { display: none; }
 
+/* Treść: płynnie na pełną szerokość (minimalne wcięcia), z górnym limitem dla
+   bardzo szerokich ekranów (ultrawide) — żeby wiersze nie były nieczytelnie długie. */
 .content {
-    flex: 1; min-width: 0; max-width: 1600px; width: 100%;
+    flex: 1; min-width: 0; max-width: 1800px; width: 100%;
     margin: 0 auto; padding: 28px 28px 56px;
 }
 
