@@ -17,8 +17,49 @@
         <div class="alert alert--success">{{ session('status') }}</div>
     @endif
 
-    {{-- Układ 3-kolumnowy: lewe menu kategorii | treść wybranej kategorii | panel boczny.
-         Menu jest osobną kolumną (niezależną od treści). Przełączanie po stronie klienta. --}}
+    {{-- Górny pasek: Status + Akcje (poziomo) nad układem — uwalnia szerokość
+         dla menu i treści poniżej. --}}
+    <div class="asset-top">
+        @if ($canUpdate || $canArchive)
+            <div class="card">
+                <div class="card__head">Akcje</div>
+                <div class="card__body stack" style="gap:10px">
+                    @if ($canUpdate)
+                        <a href="{{ route('assets.edit', $asset) }}" wire:navigate class="btn btn--primary btn--sm">Edytuj</a>
+                    @endif
+
+                    @if ($canArchive && $asset->status !== \App\Enums\AssetStatus::Archived)
+                        <button class="btn btn--ghost btn--sm" wire:click="archive"
+                            wire:confirm="Zarchiwizować ten zasób?"
+                            wire:loading.attr="disabled" wire:target="archive">Archiwizuj</button>
+                    @endif
+                </div>
+            </div>
+        @endif
+
+        @if ($canForceDelete)
+            <div class="card">
+                <div class="card__head">Strefa niebezpieczna</div>
+                <div class="card__body stack" style="gap:10px">
+                    <button type="button" class="btn btn--danger btn--sm" wire:click="forceDelete"
+                        wire:confirm="Trwale usunie ten zasób WRAZ z wartościami pól, wpisami grup, relacjami, przypisaniami, historią i załącznikami. Powiązane zgłoszenia stracą link do zasobu (zostaną zachowane). Operacja jest nieodwracalna. Kontynuować?"
+                        wire:loading.attr="disabled" wire:target="forceDelete">Usuń trwale</button>
+                </div>
+            </div>
+        @endif
+
+        <div class="card">
+            <div class="card__head">Status</div>
+            <div class="card__body stack" style="gap:8px;font-size:14px">
+                <div class="list-row"><span class="muted">Status</span>
+                    <span><span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span></span></div>
+                <div class="list-row"><span class="muted">Prywatny</span><span>{{ $asset->is_private ? 'Tak' : 'Nie' }}</span></div>
+                <div class="list-row"><span class="muted">Aktualizacja</span><span>{{ $asset->updated_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Układ 2-kolumnowy: lewe menu kategorii | treść wybranej kategorii. --}}
     <div class="asset-layout" x-data="{ tab: 'basic' }">
         {{-- ------------------------- LEWO: menu kategorii ------------------------- --}}
         <nav class="card asset-menu" aria-label="Kategorie zasobu">
@@ -110,45 +151,5 @@
             </div>
         </div>
 
-        {{-- ------------------------- PRAWO: akcje + status ------------------------ --}}
-        <div class="asset-side stack" style="gap:18px">
-            @if ($canUpdate || $canArchive)
-                <div class="card">
-                    <div class="card__head">Akcje</div>
-                    <div class="card__body stack" style="gap:10px">
-                        @if ($canUpdate)
-                            <a href="{{ route('assets.edit', $asset) }}" wire:navigate class="btn btn--primary btn--sm">Edytuj</a>
-                        @endif
-
-                        @if ($canArchive && $asset->status !== \App\Enums\AssetStatus::Archived)
-                            <button class="btn btn--ghost btn--sm" wire:click="archive"
-                                wire:confirm="Zarchiwizować ten zasób?"
-                                wire:loading.attr="disabled" wire:target="archive">Archiwizuj</button>
-                        @endif
-                    </div>
-                </div>
-            @endif
-
-            @if ($canForceDelete)
-                <div class="card">
-                    <div class="card__head">Strefa niebezpieczna</div>
-                    <div class="card__body stack" style="gap:10px">
-                        <button type="button" class="btn btn--danger btn--sm" wire:click="forceDelete"
-                            wire:confirm="Trwale usunie ten zasób WRAZ z wartościami pól, wpisami grup, relacjami, przypisaniami, historią i załącznikami. Powiązane zgłoszenia stracą link do zasobu (zostaną zachowane). Operacja jest nieodwracalna. Kontynuować?"
-                            wire:loading.attr="disabled" wire:target="forceDelete">Usuń trwale</button>
-                    </div>
-                </div>
-            @endif
-
-            <div class="card">
-                <div class="card__head">Status</div>
-                <div class="card__body stack" style="gap:8px;font-size:14px">
-                    <div class="list-row"><span class="muted">Status</span>
-                        <span><span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span></span></div>
-                    <div class="list-row"><span class="muted">Prywatny</span><span>{{ $asset->is_private ? 'Tak' : 'Nie' }}</span></div>
-                    <div class="list-row"><span class="muted">Aktualizacja</span><span>{{ $asset->updated_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
