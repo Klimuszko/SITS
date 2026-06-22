@@ -240,7 +240,7 @@ a:hover { text-decoration: underline; }
 .sidebar__backdrop { display: none; }
 
 .content {
-    flex: 1; min-width: 0; max-width: 1180px; width: 100%;
+    flex: 1; min-width: 0; max-width: 1600px; width: 100%;
     margin: 0 auto; padding: 28px 28px 56px;
 }
 
