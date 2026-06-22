@@ -507,7 +507,7 @@ html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180de
 /* ---------- Kategorie zasobu: boczne menu (sekcje najwyższego poziomu) ---------- */
 [x-cloak] { display: none !important; }
 
-.asset-cats { display: grid; grid-template-columns: 210px 1fr; align-items: start; }
+.asset-cats { display: grid; grid-template-columns: 210px 1fr; align-items: stretch; }
 .asset-cats__nav { display: flex; flex-direction: column; gap: 2px; padding: 8px; border-right: 1px solid var(--border); }
 .asset-cats__tab {
     display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;

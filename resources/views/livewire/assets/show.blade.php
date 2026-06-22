@@ -20,68 +20,65 @@
     <div class="detail-grid">
         {{-- ----------------------------- KOLUMNA GŁÓWNA ----------------------------- --}}
         <div class="stack" style="gap:18px">
-            {{-- Dane podstawowe --}}
-            <div class="card">
-                <div class="card__head">Dane podstawowe</div>
-                <div class="card__body stack" style="gap:8px;font-size:14px">
-                    <div class="list-row"><span class="muted">Organizacja</span><span>{{ $asset->organization?->name ?? '—' }}</span></div>
-                    <div class="list-row"><span class="muted">Kategoria</span><span>{{ $asset->category?->name ?? '—' }}</span></div>
-                    <div class="list-row"><span class="muted">Kod inwentarzowy</span><span>{{ $asset->inventory_code ?? '—' }}</span></div>
-                    <div class="list-row"><span class="muted">Lokalizacja</span><span>{{ $asset->location?->name ?? '—' }}</span></div>
-                    <div class="list-row"><span class="muted">Zasób nadrzędny</span>
-                        <span>
-                            @if ($asset->parent)
-                                <a href="{{ route('assets.show', $asset->parent) }}" wire:navigate>{{ $asset->parent->name }}</a>
-                            @else — @endif
-                        </span>
+            {{-- Pionowe menu kategorii po lewej (Podstawowe + sekcje najwyższego poziomu),
+                 po środku TYLKO treść wybranej kategorii. Przełączanie po stronie klienta
+                 (Alpine) — niezależne od treści, bez przeładowań. --}}
+            <div class="card" x-data="{ tab: 'basic' }">
+                <div class="asset-cats">
+                    <nav class="asset-cats__nav" aria-label="Kategorie zasobu">
+                        {{-- Stała kategoria „Podstawowe" (ikona „i"). --}}
+                        <button type="button" class="asset-cats__tab"
+                                :class="{ 'is-active': tab === 'basic' }" @click="tab = 'basic'">
+                            <span class="asset-cats__icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            </span>
+                            <span>Podstawowe</span>
+                        </button>
+
+                        @foreach ($sectionTree as $node)
+                            <button type="button" class="asset-cats__tab"
+                                    :class="{ 'is-active': tab === {{ $node['section']->id }} }"
+                                    @click="tab = {{ $node['section']->id }}">
+                                @if (filled($node['section']->icon))
+                                    <span class="asset-cats__icon">{!! $node['section']->icon !!}</span>
+                                @endif
+                                <span>{{ $node['section']->name }}</span>
+                            </button>
+                        @endforeach
+                    </nav>
+
+                    <div class="asset-cats__content">
+                        {{-- Podstawowe: dane podstawowe + notatki (domyślnie widoczne). --}}
+                        <div x-show="tab === 'basic'" class="stack" style="gap:8px;font-size:14px">
+                            <div class="list-row"><span class="muted">Organizacja</span><span>{{ $asset->organization?->name ?? '—' }}</span></div>
+                            <div class="list-row"><span class="muted">Kategoria</span><span>{{ $asset->category?->name ?? '—' }}</span></div>
+                            <div class="list-row"><span class="muted">Kod inwentarzowy</span><span>{{ $asset->inventory_code ?? '—' }}</span></div>
+                            <div class="list-row"><span class="muted">Lokalizacja</span><span>{{ $asset->location?->name ?? '—' }}</span></div>
+                            <div class="list-row"><span class="muted">Zasób nadrzędny</span>
+                                <span>
+                                    @if ($asset->parent)
+                                        <a href="{{ route('assets.show', $asset->parent) }}" wire:navigate>{{ $asset->parent->name }}</a>
+                                    @else — @endif
+                                </span>
+                            </div>
+                            <div class="list-row"><span class="muted">Utworzył</span><span>{{ $asset->createdBy?->name ?? '—' }}</span></div>
+                            @if ($asset->notes)
+                                <div style="margin-top:10px">
+                                    <div class="muted" style="font-weight:600;margin-bottom:4px">Notatki</div>
+                                    <div>{!! nl2br(e($asset->notes)) !!}</div>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Kategorie ze struktury (ukryte do czasu wyboru). --}}
+                        @foreach ($sectionTree as $node)
+                            <div x-show="tab === {{ $node['section']->id }}" x-cloak class="stack" style="gap:8px;font-size:14px">
+                                @include('livewire.assets._section', ['node' => $node, 'depth' => 0])
+                            </div>
+                        @endforeach
                     </div>
-                    <div class="list-row"><span class="muted">Utworzył</span><span>{{ $asset->createdBy?->name ?? '—' }}</span></div>
                 </div>
             </div>
-
-            {{-- Struktura zasobu: główne kategorie (sekcje najwyższego poziomu) w bocznym
-                 menu z ikoną; treść wybranej kategorii po prawej. Przełączanie po stronie
-                 klienta (Alpine) — bez przeładowań. --}}
-            @if ($sectionTree->isNotEmpty())
-                <div class="card" x-data="{ tab: {{ $sectionTree->first()['section']->id }} }">
-                    <div class="asset-cats">
-                        <nav class="asset-cats__nav" aria-label="Kategorie zasobu">
-                            @foreach ($sectionTree as $node)
-                                <button type="button" class="asset-cats__tab"
-                                        :class="{ 'is-active': tab === {{ $node['section']->id }} }"
-                                        @click="tab = {{ $node['section']->id }}">
-                                    @if (filled($node['section']->icon))
-                                        <span class="asset-cats__icon">{!! $node['section']->icon !!}</span>
-                                    @endif
-                                    <span>{{ $node['section']->name }}</span>
-                                </button>
-                            @endforeach
-                        </nav>
-                        <div class="asset-cats__content">
-                            @foreach ($sectionTree as $node)
-                                <div x-show="tab === {{ $node['section']->id }}" x-cloak class="stack" style="gap:8px;font-size:14px">
-                                    @include('livewire.assets._section', ['node' => $node, 'depth' => 0])
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-            @else
-                <div class="card">
-                    <div class="card__head">Pola kategorii</div>
-                    <div class="card__body">
-                        <p class="muted" style="margin:0">Brak dodatkowych pól dla tej kategorii.</p>
-                    </div>
-                </div>
-            @endif
-
-            {{-- Notatki --}}
-            @if ($asset->notes)
-                <div class="card">
-                    <div class="card__head">Notatki</div>
-                    <div class="card__body">{!! nl2br(e($asset->notes)) !!}</div>
-                </div>
-            @endif
 
             {{-- Historia zmian --}}
             <div class="card">
