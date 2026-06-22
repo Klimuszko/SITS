@@ -503,3 +503,26 @@ html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180de
 .article-body .tip, .article-body .success { border-left-color: var(--c-green); background: var(--c-green-bg); color: var(--c-green); }
 .article-body .warning { border-left-color: var(--c-amber); background: var(--c-amber-bg); color: var(--c-amber); }
 .article-body .danger, .article-body .error { border-left-color: var(--c-red); background: var(--c-red-bg); color: var(--c-red); }
+
+/* ---------- Kategorie zasobu: boczne menu (sekcje najwyższego poziomu) ---------- */
+[x-cloak] { display: none !important; }
+
+.asset-cats { display: grid; grid-template-columns: 210px 1fr; align-items: start; }
+.asset-cats__nav { display: flex; flex-direction: column; gap: 2px; padding: 8px; border-right: 1px solid var(--border); }
+.asset-cats__tab {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 9px 12px; border: none; border-radius: var(--radius-sm); background: none;
+    color: var(--text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background-color .12s ease, color .12s ease;
+}
+.asset-cats__tab:hover { background: var(--surface-2); }
+.asset-cats__tab.is-active { background: var(--primary); color: var(--on-primary); }
+.asset-cats__icon { display: inline-flex; flex: 0 0 18px; width: 18px; height: 18px; }
+.asset-cats__icon svg { width: 100%; height: 100%; }
+.asset-cats__content { padding: 16px 20px; min-width: 0; }
+
+@media (max-width: 640px) {
+    .asset-cats { grid-template-columns: 1fr; }
+    .asset-cats__nav { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    .asset-cats__tab { width: auto; white-space: nowrap; }
+}

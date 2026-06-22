@@ -21,6 +21,7 @@ class AssetSection extends Model
         'asset_category_id',
         'parent_id',
         'name',
+        'icon',
         'key',
         'is_group',
         'is_repeatable',

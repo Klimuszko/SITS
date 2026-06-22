@@ -39,22 +39,41 @@
                 </div>
             </div>
 
-            {{-- Pola kategorii (struktura: sekcje, podsekcje, grupy powtarzalne) --}}
-            @forelse ($sectionTree as $node)
-                <div class="card">
-                    <div class="card__head">{{ $node['section']->name }}</div>
-                    <div class="card__body stack" style="gap:8px;font-size:14px">
-                        @include('livewire.assets._section', ['node' => $node, 'depth' => 0])
+            {{-- Struktura zasobu: główne kategorie (sekcje najwyższego poziomu) w bocznym
+                 menu z ikoną; treść wybranej kategorii po prawej. Przełączanie po stronie
+                 klienta (Alpine) — bez przeładowań. --}}
+            @if ($sectionTree->isNotEmpty())
+                <div class="card" x-data="{ tab: {{ $sectionTree->first()['section']->id }} }">
+                    <div class="asset-cats">
+                        <nav class="asset-cats__nav" aria-label="Kategorie zasobu">
+                            @foreach ($sectionTree as $node)
+                                <button type="button" class="asset-cats__tab"
+                                        :class="{ 'is-active': tab === {{ $node['section']->id }} }"
+                                        @click="tab = {{ $node['section']->id }}">
+                                    @if (filled($node['section']->icon))
+                                        <span class="asset-cats__icon">{!! $node['section']->icon !!}</span>
+                                    @endif
+                                    <span>{{ $node['section']->name }}</span>
+                                </button>
+                            @endforeach
+                        </nav>
+                        <div class="asset-cats__content">
+                            @foreach ($sectionTree as $node)
+                                <div x-show="tab === {{ $node['section']->id }}" x-cloak class="stack" style="gap:8px;font-size:14px">
+                                    @include('livewire.assets._section', ['node' => $node, 'depth' => 0])
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
-            @empty
+            @else
                 <div class="card">
                     <div class="card__head">Pola kategorii</div>
                     <div class="card__body">
                         <p class="muted" style="margin:0">Brak dodatkowych pól dla tej kategorii.</p>
                     </div>
                 </div>
-            @endforelse
+            @endif
 
             {{-- Notatki --}}
             @if ($asset->notes)

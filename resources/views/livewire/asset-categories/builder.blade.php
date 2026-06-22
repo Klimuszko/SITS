@@ -38,6 +38,17 @@
                         @error('sectionName') <span class="error">{{ $message }}</span> @enderror
                     </div>
 
+                    @if ($sectionKind === $kindSection)
+                        <div class="field field--full">
+                            <label for="sectionIcon">Ikona kategorii (SVG)
+                                <span class="hint">— pokazywana w bocznym menu zasobu; wklej kod SVG (opcjonalnie)</span>
+                            </label>
+                            <textarea id="sectionIcon" class="textarea" rows="3" wire:model="sectionIcon"
+                                      placeholder="Wklej kod SVG (np. <svg>…</svg>)"></textarea>
+                            @error('sectionIcon') <span class="error">{{ $message }}</span> @enderror
+                        </div>
+                    @endif
+
                     @if ($sectionKind !== $kindSection)
                         <div class="field">
                             <label for="sectionParentId">Węzeł nadrzędny *</label>

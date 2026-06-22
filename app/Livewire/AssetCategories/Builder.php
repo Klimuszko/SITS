@@ -8,9 +8,11 @@ use App\Models\AssetCategory;
 use App\Models\AssetField;
 use App\Models\AssetSection;
 use App\Services\AuditLogger;
+use App\Support\SvgSanitizer;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -34,6 +36,7 @@ class Builder extends Component
     public string $sectionKey = '';
     public ?int $sectionParentId = null;
     public int $sectionOrder = 0;
+    public string $sectionIcon = '';   // SVG dla sekcji najwyższego poziomu (główna kategoria)
 
     // Konfiguracja grupy powtarzalnej / pod-zasobu (tylko dla KIND_GROUP).
     public ?int $sectionMinEntries = null;
@@ -113,6 +116,9 @@ class Builder extends Component
                     ->where('asset_category_id', $this->assetCategory->id),
             ],
             'sectionOrder' => ['integer', 'min:0'],
+            // Ikona (SVG) — tylko dla sekcji najwyższego poziomu; właściwa walidacja
+            // to sanityzacja w saveSection. Tu tylko limit rozmiaru.
+            'sectionIcon' => ['nullable', 'string', 'max:20000'],
             // Konfiguracja grupy powtarzalnej.
             'sectionMinEntries' => ['nullable', 'integer', 'min:0'],
             'sectionMaxEntries' => ['nullable', 'integer', 'min:1'],
@@ -163,6 +169,7 @@ class Builder extends Component
         $this->sectionKind = $this->kindOf($section);
         $this->sectionName = $section->name;
         $this->sectionKey = $section->key;
+        $this->sectionIcon = $section->icon ?? '';
         $this->sectionParentId = $section->parent_id;
         $this->sectionOrder = $section->order;
         $this->sectionMinEntries = $section->min_entries;
@@ -219,12 +226,26 @@ class Builder extends Component
             return;
         }
 
+        // Ikona tylko dla sekcji najwyższego poziomu (główna kategoria). Sanityzacja
+        // SVG przy zapisie (inline w widoku → musi być czysty); rzuca, gdy nie-SVG.
+        $icon = null;
+        if ($this->sectionKind === self::KIND_SECTION && filled($this->sectionIcon)) {
+            try {
+                $icon = SvgSanitizer::clean($this->sectionIcon);
+            } catch (InvalidArgumentException) {
+                $this->addError('sectionIcon', 'Ikona musi być prawidłowym kodem SVG.');
+
+                return;
+            }
+        }
+
         AssetSection::updateOrCreate(
             ['id' => $this->editingSectionId],
             [
                 'asset_category_id' => $this->assetCategory->id,
                 'parent_id' => $parentId,
                 'name' => $data['sectionName'],
+                'icon' => $icon,
                 'key' => $data['sectionKey'],
                 'is_group' => $isGroup,
                 'is_repeatable' => $isRepeatable,
@@ -319,7 +340,7 @@ class Builder extends Component
     public function resetSectionForm(): void
     {
         $this->reset([
-            'editingSectionId', 'sectionName', 'sectionKey', 'sectionParentId',
+            'editingSectionId', 'sectionName', 'sectionKey', 'sectionIcon', 'sectionParentId',
             'sectionOrder', 'sectionMinEntries', 'sectionMaxEntries',
             'sectionIsTicketLinkable', 'sectionTicketLabel', 'sectionDisplayFieldId',
             'sectionLinkParentOnSelect',
