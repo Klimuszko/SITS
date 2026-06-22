@@ -4,7 +4,10 @@ namespace App\Livewire\AssetCategories;
 
 use App\Enums\AuditAction;
 use App\Models\AssetCategory;
+use App\Models\AssetField;
+use App\Models\AssetSection;
 use App\Services\AuditLogger;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -147,6 +150,93 @@ class Index extends Component
         }
 
         session()->flash('status', 'Kategoria została trwale usunięta.');
+    }
+
+    /**
+     * Duplikuje całą kategorię wraz ze strukturą (sekcje, podsekcje, grupy) i polami.
+     * Nowa kategoria: nazwa „(kopia)", nowy unikalny klucz. Klucze sekcji i pól są
+     * unikalne w obrębie kategorii, więc kopiujemy je 1:1 (nowa kategoria = brak kolizji).
+     * Dowiązania wewnątrzkategoryjne (parent_id sekcji, display_field_id grupy) są
+     * przemapowane na skopiowane wiersze. Całość w transakcji.
+     */
+    public function duplicateCategory(int $id): void
+    {
+        $this->authorize('manage-categories');
+
+        $source = AssetCategory::with(['sections', 'fields'])->find($id);
+
+        if ($source === null) {
+            return;
+        }
+
+        DB::transaction(function () use ($source) {
+            $copy = AssetCategory::create([
+                'name' => $source->name.' (kopia)',
+                'key' => $this->uniqueKey(Str::slug($source->name).'-kopia'),
+                'icon' => $source->icon,
+                'description' => $source->description,
+                'is_active' => $source->is_active,
+            ]);
+
+            // 1) Sekcje — najpierw płasko (parent_id/display_field_id ustawiamy w kroku 3).
+            $sectionMap = [];
+            foreach ($source->sections as $section) {
+                $sectionMap[$section->id] = AssetSection::create([
+                    'asset_category_id' => $copy->id,
+                    'parent_id' => null,
+                    'name' => $section->name,
+                    'icon' => $section->icon,
+                    'key' => $section->key,
+                    'is_group' => $section->is_group,
+                    'is_repeatable' => $section->is_repeatable,
+                    'min_entries' => $section->min_entries,
+                    'max_entries' => $section->max_entries,
+                    'is_ticket_linkable' => $section->is_ticket_linkable,
+                    'ticket_label' => $section->ticket_label,
+                    'display_field_id' => null,
+                    'link_parent_on_select' => $section->link_parent_on_select,
+                    'order' => $section->order,
+                    'is_active' => $section->is_active,
+                ])->id;
+            }
+
+            // 2) Pola — przypięte do skopiowanych sekcji.
+            $fieldMap = [];
+            foreach ($source->fields as $field) {
+                $fieldMap[$field->id] = AssetField::create([
+                    'asset_category_id' => $copy->id,
+                    'asset_section_id' => $field->asset_section_id
+                        ? ($sectionMap[$field->asset_section_id] ?? null)
+                        : null,
+                    'name' => $field->name,
+                    'key' => $field->key,
+                    'type' => $field->type,
+                    'options' => $field->options,
+                    'placeholder' => $field->placeholder,
+                    'default_value' => $field->default_value,
+                    'help' => $field->help,
+                    'is_required' => $field->is_required,
+                    'order' => $field->order,
+                    'is_active' => $field->is_active,
+                ])->id;
+            }
+
+            // 3) Dowiązania wewnątrzkategoryjne na nowe identyfikatory.
+            foreach ($source->sections as $section) {
+                $updates = [];
+                if ($section->parent_id && isset($sectionMap[$section->parent_id])) {
+                    $updates['parent_id'] = $sectionMap[$section->parent_id];
+                }
+                if ($section->display_field_id && isset($fieldMap[$section->display_field_id])) {
+                    $updates['display_field_id'] = $fieldMap[$section->display_field_id];
+                }
+                if ($updates !== []) {
+                    AssetSection::whereKey($sectionMap[$section->id])->update($updates);
+                }
+            }
+        });
+
+        session()->flash('status', 'Skopiowano kategorię wraz ze strukturą i polami.');
     }
 
     /** Unikalny klucz (sufiks -2, -3, ...), ignorując bieżąco edytowaną kategorię. */

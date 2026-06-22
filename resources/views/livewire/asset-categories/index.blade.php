@@ -84,6 +84,9 @@
                         <a href="{{ route('dictionaries.asset-category-fields', $category) }}" wire:navigate
                            class="btn btn--ghost btn--sm">Pola i sekcje</a>
                         <button type="button" class="btn btn--ghost btn--sm" wire:click="edit({{ $category->id }})">Edytuj</button>
+                        <button type="button" class="btn btn--ghost btn--sm"
+                                wire:click="duplicateCategory({{ $category->id }})"
+                                wire:confirm="Skopiować całą kategorię wraz ze strukturą i polami?">Kopiuj</button>
                         @if ($category->is_active)
                             <button type="button" class="btn btn--ghost btn--sm"
                                     wire:click="deactivate({{ $category->id }})"

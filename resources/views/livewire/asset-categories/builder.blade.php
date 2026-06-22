@@ -252,6 +252,7 @@
                             <button type="button" class="btn btn--ghost btn--sm" wire:click="moveFieldUp({{ $field->id }})" title="Przenieś wyżej" aria-label="Przenieś wyżej">↑</button>
                             <button type="button" class="btn btn--ghost btn--sm" wire:click="moveFieldDown({{ $field->id }})" title="Przenieś niżej" aria-label="Przenieś niżej">↓</button>
                             <button type="button" class="btn btn--ghost btn--sm" wire:click="editField({{ $field->id }})">Edytuj</button>
+                            <button type="button" class="btn btn--ghost btn--sm" wire:click="duplicateField({{ $field->id }})">Kopiuj</button>
                             @if ($field->is_active)
                                 <button type="button" class="btn btn--ghost btn--sm"
                                         wire:click="deactivateField({{ $field->id }})"

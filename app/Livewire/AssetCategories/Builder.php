@@ -433,6 +433,106 @@ class Builder extends Component
         $section->delete();
     }
 
+    /**
+     * Duplikuje węzeł wraz z całym poddrzewem (podsekcje, grupy) i polami.
+     * Korzeń kopii: ten sam rodzic, sufiks „(kopia)" w nazwie, na górze poziomu.
+     * Każdy węzeł i pole dostaje nowy, unikalny klucz. display_field_id grupy
+     * jest przemapowany na skopiowane pole (a nie oryginał).
+     */
+    public function duplicateSection(int $id): void
+    {
+        $this->authorize('manage-categories');
+
+        $root = $this->assetCategory->sections()->find($id);
+
+        if ($root === null) {
+            return;
+        }
+
+        $fieldMap = [];      // staryFieldId => nowyFieldId
+        $groupsToRemap = []; // [nowaSekcja, staryDisplayFieldId]
+
+        $rootOrder = $this->topOrder(
+            $this->assetCategory->sections()->where('parent_id', $root->parent_id)
+        );
+
+        $this->copySectionTree($root, $root->parent_id, true, $rootOrder, $fieldMap, $groupsToRemap);
+
+        foreach ($groupsToRemap as [$section, $oldDisplayId]) {
+            if (isset($fieldMap[$oldDisplayId])) {
+                $section->display_field_id = $fieldMap[$oldDisplayId];
+                $section->save();
+            }
+        }
+
+        session()->flash('status', 'Skopiowano węzeł wraz z podelementami.');
+    }
+
+    /**
+     * Rekurencyjnie tworzy kopię węzła: sam węzeł (nowy klucz), jego pola
+     * (nowe klucze, zapamiętane w $fieldMap), na końcu potomne węzły.
+     * Korzeń ($isRoot) dostaje sufiks „(kopia)" i podany $order; potomki
+     * zachowują nazwę i własny order. Głębokość = jak w źródle (≤ limit).
+     *
+     * @param  array<int,int>  $fieldMap
+     * @param  array<int,array{0:AssetSection,1:int}>  $groupsToRemap
+     */
+    protected function copySectionTree(
+        AssetSection $source,
+        ?int $newParentId,
+        bool $isRoot,
+        int $order,
+        array &$fieldMap,
+        array &$groupsToRemap,
+    ): AssetSection {
+        $copy = AssetSection::create([
+            'asset_category_id' => $this->assetCategory->id,
+            'parent_id' => $newParentId,
+            'name' => $isRoot ? $source->name.' (kopia)' : $source->name,
+            'icon' => $source->icon,
+            'key' => $this->uniqueSectionKey($source->key.'-kopia'),
+            'is_group' => $source->is_group,
+            'is_repeatable' => $source->is_repeatable,
+            'min_entries' => $source->min_entries,
+            'max_entries' => $source->max_entries,
+            'is_ticket_linkable' => $source->is_ticket_linkable,
+            'ticket_label' => $source->ticket_label,
+            'display_field_id' => null,   // przemapowane po skopiowaniu pól
+            'link_parent_on_select' => $source->link_parent_on_select,
+            'order' => $order,
+            'is_active' => $source->is_active,
+        ]);
+
+        foreach ($source->fields()->get() as $field) {
+            $newField = AssetField::create([
+                'asset_category_id' => $this->assetCategory->id,
+                'asset_section_id' => $copy->id,
+                'name' => $field->name,
+                'key' => $this->uniqueFieldKey($field->key.'-kopia'),
+                'type' => $field->type,
+                'options' => $field->options,
+                'placeholder' => $field->placeholder,
+                'default_value' => $field->default_value,
+                'help' => $field->help,
+                'is_required' => $field->is_required,
+                'order' => $field->order,
+                'is_active' => $field->is_active,
+            ]);
+
+            $fieldMap[$field->id] = $newField->id;
+        }
+
+        if ($source->display_field_id !== null) {
+            $groupsToRemap[] = [$copy, $source->display_field_id];
+        }
+
+        foreach ($source->children()->get() as $child) {
+            $this->copySectionTree($child, $copy->id, false, (int) $child->order, $fieldMap, $groupsToRemap);
+        }
+
+        return $copy;
+    }
+
     public function resetSectionForm(): void
     {
         $this->reset([
@@ -638,6 +738,40 @@ class Builder extends Component
 
         $this->resetFieldForm();
         session()->flash('status', 'Zapisano pole.');
+    }
+
+    /**
+     * Duplikuje pojedyncze pole w obrębie tego samego węzła. Kopia: nazwa z
+     * sufiksem „(kopia)", nowy unikalny klucz, na górze swojego węzła.
+     */
+    public function duplicateField(int $id): void
+    {
+        $this->authorize('manage-categories');
+
+        $field = $this->assetCategory->fields()->find($id);
+
+        if ($field === null) {
+            return;
+        }
+
+        AssetField::create([
+            'asset_category_id' => $this->assetCategory->id,
+            'asset_section_id' => $field->asset_section_id,
+            'name' => $field->name.' (kopia)',
+            'key' => $this->uniqueFieldKey($field->key.'-kopia'),
+            'type' => $field->type,
+            'options' => $field->options,
+            'placeholder' => $field->placeholder,
+            'default_value' => $field->default_value,
+            'help' => $field->help,
+            'is_required' => $field->is_required,
+            'order' => $this->topOrder(
+                $this->assetCategory->fields()->where('asset_section_id', $field->asset_section_id)
+            ),
+            'is_active' => $field->is_active,
+        ]);
+
+        session()->flash('status', 'Skopiowano pole.');
     }
 
     /**

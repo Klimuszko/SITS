@@ -27,6 +27,7 @@
             <button type="button" class="btn btn--ghost btn--sm" wire:click="moveSectionUp({{ $node->id }})" title="Przenieś wyżej" aria-label="Przenieś wyżej">↑</button>
             <button type="button" class="btn btn--ghost btn--sm" wire:click="moveSectionDown({{ $node->id }})" title="Przenieś niżej" aria-label="Przenieś niżej">↓</button>
             <button type="button" class="btn btn--ghost btn--sm" wire:click="editSection({{ $node->id }})">Edytuj</button>
+            <button type="button" class="btn btn--ghost btn--sm" wire:click="duplicateSection({{ $node->id }})">Kopiuj</button>
             @if ($node->is_active)
                 <button type="button" class="btn btn--ghost btn--sm"
                         wire:click="deactivateSection({{ $node->id }})"
