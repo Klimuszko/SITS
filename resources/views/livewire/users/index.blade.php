@@ -74,7 +74,7 @@
                         @can('delete', $u)
                             <button type="button" class="btn btn--danger btn--sm"
                                     wire:click="deleteUser({{ $u->id }})"
-                                    wire:confirm="Usunąć konto „{{ $u->name }}"? Zniknie z list (można je odzyskać).">
+                                    wire:confirm="Usunąć to konto? Zniknie z list (można je odzyskać).">
                                 Usuń
                             </button>
                         @endcan
