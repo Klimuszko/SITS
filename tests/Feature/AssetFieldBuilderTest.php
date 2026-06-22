@@ -39,7 +39,6 @@ class AssetFieldBuilderTest extends TestCase
             ->set('fieldOptions', "Linux\nWindows\nmacOS")
             ->set('fieldIsRequired', true)
             ->set('fieldSectionId', $section->id)
-            ->set('fieldOrder', 2)
             ->call('saveField')
             ->assertHasNoErrors();
 
@@ -51,7 +50,6 @@ class AssetFieldBuilderTest extends TestCase
         $this->assertSame(['Linux', 'Windows', 'macOS'], $field->options);
         $this->assertTrue($field->is_required);
         $this->assertSame($section->id, $field->asset_section_id);
-        $this->assertSame(2, $field->order);
         $this->assertTrue($field->is_active);
     }
 
@@ -218,14 +216,12 @@ class AssetFieldBuilderTest extends TestCase
         Livewire::test(Builder::class, ['assetCategory' => $this->category])
             ->set('sectionName', 'Sieć')
             ->set('sectionKey', 'siec')
-            ->set('sectionOrder', 1)
             ->call('saveSection')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('asset_sections', [
             'asset_category_id' => $this->category->id,
             'key' => 'siec',
-            'order' => 1,
             'is_active' => true,
         ]);
     }

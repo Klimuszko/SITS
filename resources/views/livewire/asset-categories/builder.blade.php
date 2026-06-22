@@ -63,12 +63,6 @@
                             @error('sectionParentId') <span class="error">{{ $message }}</span> @enderror
                         </div>
                     @endif
-
-                    <div class="field">
-                        <label for="sectionOrder">Kolejność</label>
-                        <input id="sectionOrder" type="number" min="0" class="input" wire:model="sectionOrder">
-                        @error('sectionOrder') <span class="error">{{ $message }}</span> @enderror
-                    </div>
                 </div>
 
                 {{-- Konfiguracja grupy powtarzalnej / pod-zasobu --}}
@@ -192,12 +186,6 @@
                     </div>
 
                     <div class="field">
-                        <label for="fieldOrder">Kolejność</label>
-                        <input id="fieldOrder" type="number" min="0" class="input" wire:model="fieldOrder">
-                        @error('fieldOrder') <span class="error">{{ $message }}</span> @enderror
-                    </div>
-
-                    <div class="field">
                         <label for="fieldPlaceholder">Podpowiedź (placeholder)</label>
                         <input id="fieldPlaceholder" class="input" wire:model="fieldPlaceholder">
                         @error('fieldPlaceholder') <span class="error">{{ $message }}</span> @enderror
@@ -238,7 +226,6 @@
             <table class="table" style="margin-top:18px">
                 <thead>
                     <tr>
-                        <th scope="col">Kolejność</th>
                         <th scope="col">Nazwa</th>
                         <th scope="col">Typ</th>
                         <th scope="col">Węzeł</th>
@@ -250,7 +237,6 @@
                 <tbody>
                 @forelse ($fields as $field)
                     <tr>
-                        <td class="muted">{{ $field->order }}</td>
                         <td><strong>{{ $field->name }}</strong></td>
                         <td>{{ $field->type->label() }}</td>
                         <td class="muted">{{ $field->section?->name ?? '—' }}</td>
@@ -262,7 +248,9 @@
                                 <span class="badge badge--gray">Nieaktywne</span>
                             @endif
                         </td>
-                        <td style="text-align:right">
+                        <td style="text-align:right;white-space:nowrap">
+                            <button type="button" class="btn btn--ghost btn--sm" wire:click="moveFieldUp({{ $field->id }})" title="Przenieś wyżej" aria-label="Przenieś wyżej">↑</button>
+                            <button type="button" class="btn btn--ghost btn--sm" wire:click="moveFieldDown({{ $field->id }})" title="Przenieś niżej" aria-label="Przenieś niżej">↓</button>
                             <button type="button" class="btn btn--ghost btn--sm" wire:click="editField({{ $field->id }})">Edytuj</button>
                             @if ($field->is_active)
                                 <button type="button" class="btn btn--ghost btn--sm"
@@ -286,7 +274,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="table__empty">Brak pól.</td></tr>
+                    <tr><td colspan="6" class="table__empty">Brak pól.</td></tr>
                 @endforelse
                 </tbody>
             </table>

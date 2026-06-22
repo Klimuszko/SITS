@@ -35,7 +35,6 @@ class Builder extends Component
     public string $sectionName = '';
     public string $sectionKey = '';
     public ?int $sectionParentId = null;
-    public int $sectionOrder = 0;
     public string $sectionIcon = '';   // SVG dla sekcji najwyższego poziomu (główna kategoria)
 
     // Konfiguracja grupy powtarzalnej / pod-zasobu (tylko dla KIND_GROUP).
@@ -55,7 +54,6 @@ class Builder extends Component
     public string $fieldOptions = '';
     public bool $fieldIsRequired = false;
     public ?int $fieldSectionId = null;
-    public int $fieldOrder = 0;
     public ?string $fieldPlaceholder = null;
     public ?string $fieldDefaultValue = null;
     public ?string $fieldHelp = null;
@@ -115,7 +113,6 @@ class Builder extends Component
                 Rule::exists('asset_sections', 'id')
                     ->where('asset_category_id', $this->assetCategory->id),
             ],
-            'sectionOrder' => ['integer', 'min:0'],
             // Ikona (SVG) — tylko dla sekcji najwyższego poziomu; właściwa walidacja
             // to sanityzacja w saveSection. Tu tylko limit rozmiaru.
             'sectionIcon' => ['nullable', 'string', 'max:20000'],
@@ -171,7 +168,6 @@ class Builder extends Component
         $this->sectionKey = $section->key;
         $this->sectionIcon = $section->icon ?? '';
         $this->sectionParentId = $section->parent_id;
-        $this->sectionOrder = $section->order;
         $this->sectionMinEntries = $section->min_entries;
         $this->sectionMaxEntries = $section->max_entries;
         $this->sectionIsTicketLinkable = $section->is_ticket_linkable;
@@ -195,7 +191,6 @@ class Builder extends Component
             'sectionName' => 'nazwa węzła',
             'sectionKey' => 'klucz węzła',
             'sectionParentId' => 'węzeł nadrzędny',
-            'sectionOrder' => 'kolejność',
             'sectionMinEntries' => 'minimalna liczba wpisów',
             'sectionMaxEntries' => 'maksymalna liczba wpisów',
             'sectionTicketLabel' => 'etykieta w zgłoszeniu',
@@ -239,6 +234,12 @@ class Builder extends Component
             }
         }
 
+        // Kolejność automatyczna: nowy węzeł trafia na górę swojego poziomu, przy
+        // edycji zachowuje pozycję (zmiana wyłącznie przyciskami ↑/↓).
+        $order = $this->editingSectionId
+            ? (int) $this->assetCategory->sections()->whereKey($this->editingSectionId)->value('order')
+            : $this->topOrder($this->assetCategory->sections()->where('parent_id', $parentId));
+
         AssetSection::updateOrCreate(
             ['id' => $this->editingSectionId],
             [
@@ -255,12 +256,107 @@ class Builder extends Component
                 'ticket_label' => $isGroup ? ($this->sectionTicketLabel ?: null) : null,
                 'display_field_id' => $isGroup ? $this->sectionDisplayFieldId : null,
                 'link_parent_on_select' => $isGroup ? $this->sectionLinkParentOnSelect : false,
-                'order' => $data['sectionOrder'],
+                'order' => $order,
             ],
         );
 
         $this->resetSectionForm();
         session()->flash('status', 'Zapisano węzeł struktury.');
+    }
+
+    public function moveSectionUp(int $id): void
+    {
+        $this->moveSection($id, -1);
+    }
+
+    public function moveSectionDown(int $id): void
+    {
+        $this->moveSection($id, 1);
+    }
+
+    /** Przesuwa węzeł w obrębie rodzeństwa (ten sam rodzic) i normalizuje kolejność. */
+    protected function moveSection(int $id, int $direction): void
+    {
+        $this->authorize('manage-categories');
+
+        $node = $this->assetCategory->sections()->find($id);
+        if ($node === null) {
+            return;
+        }
+
+        $this->reorderWithin(
+            $this->assetCategory->sections()
+                ->where('parent_id', $node->parent_id)
+                ->orderBy('order')->orderBy('id')->get(),
+            $id,
+            $direction,
+        );
+    }
+
+    public function moveFieldUp(int $id): void
+    {
+        $this->moveField($id, -1);
+    }
+
+    public function moveFieldDown(int $id): void
+    {
+        $this->moveField($id, 1);
+    }
+
+    /** Przesuwa pole w obrębie rodzeństwa (ten sam węzeł) i normalizuje kolejność. */
+    protected function moveField(int $id, int $direction): void
+    {
+        $this->authorize('manage-categories');
+
+        $field = $this->assetCategory->fields()->find($id);
+        if ($field === null) {
+            return;
+        }
+
+        $this->reorderWithin(
+            $this->assetCategory->fields()
+                ->where('asset_section_id', $field->asset_section_id)
+                ->orderBy('order')->orderBy('id')->get(),
+            $id,
+            $direction,
+        );
+    }
+
+    /**
+     * Zamienia element miejscami z sąsiadem (góra/dół) i zapisuje kolejność rodzeństwa
+     * jako spójne 0..n — odporne na zduplikowane/legacy wartości order.
+     *
+     * @param  Collection<int,\Illuminate\Database\Eloquent\Model>  $items
+     */
+    protected function reorderWithin(Collection $items, int $id, int $direction): void
+    {
+        $items = $items->values();
+        $index = $items->search(fn ($item) => $item->id === $id);
+
+        if ($index === false) {
+            return;
+        }
+
+        $target = $index + $direction;
+        if ($target < 0 || $target >= $items->count()) {
+            return;
+        }
+
+        $ordered = $items->all();
+        [$ordered[$index], $ordered[$target]] = [$ordered[$target], $ordered[$index]];
+
+        foreach ($ordered as $position => $item) {
+            if ((int) $item->order !== $position) {
+                $item->order = $position;
+                $item->save();
+            }
+        }
+    }
+
+    /** Kolejność dla NOWEGO elementu: na górze swojego poziomu (min - 1). */
+    protected function topOrder($query): int
+    {
+        return ((int) ($query->min('order') ?? 0)) - 1;
     }
 
     /**
@@ -341,7 +437,7 @@ class Builder extends Component
     {
         $this->reset([
             'editingSectionId', 'sectionName', 'sectionKey', 'sectionIcon', 'sectionParentId',
-            'sectionOrder', 'sectionMinEntries', 'sectionMaxEntries',
+            'sectionMinEntries', 'sectionMaxEntries',
             'sectionIsTicketLinkable', 'sectionTicketLabel', 'sectionDisplayFieldId',
             'sectionLinkParentOnSelect',
         ]);
@@ -433,7 +529,6 @@ class Builder extends Component
                 'nullable', 'integer',
                 Rule::exists('asset_sections', 'id')->where('asset_category_id', $this->assetCategory->id),
             ],
-            'fieldOrder' => ['integer', 'min:0'],
             'fieldPlaceholder' => ['nullable', 'string', 'max:255'],
             'fieldDefaultValue' => ['nullable', 'string'],
             'fieldHelp' => ['nullable', 'string', 'max:255'],
@@ -482,7 +577,6 @@ class Builder extends Component
         $this->fieldOptions = is_array($field->options) ? implode("\n", $field->options) : '';
         $this->fieldIsRequired = $field->is_required;
         $this->fieldSectionId = $field->asset_section_id;
-        $this->fieldOrder = $field->order;
         $this->fieldPlaceholder = $field->placeholder;
         $this->fieldDefaultValue = $field->default_value;
         $this->fieldHelp = $field->help;
@@ -503,7 +597,6 @@ class Builder extends Component
             'fieldKey' => 'klucz pola',
             'fieldType' => 'typ pola',
             'fieldOptions' => 'opcje',
-            'fieldOrder' => 'kolejność',
             'fieldPlaceholder' => 'podpowiedź',
             'fieldDefaultValue' => 'wartość domyślna',
             'fieldHelp' => 'tekst pomocy',
@@ -519,11 +612,18 @@ class Builder extends Component
             return;
         }
 
+        $sectionId = $data['fieldSectionId'] ?: null;
+
+        // Kolejność automatyczna: nowe pole na górze swojego węzła; edycja zachowuje pozycję.
+        $order = $this->editingFieldId
+            ? (int) $this->assetCategory->fields()->whereKey($this->editingFieldId)->value('order')
+            : $this->topOrder($this->assetCategory->fields()->where('asset_section_id', $sectionId));
+
         AssetField::updateOrCreate(
             ['id' => $this->editingFieldId],
             [
                 'asset_category_id' => $this->assetCategory->id,
-                'asset_section_id' => $data['fieldSectionId'] ?: null,
+                'asset_section_id' => $sectionId,
                 'name' => $data['fieldName'],
                 'key' => $data['fieldKey'],
                 'type' => $data['fieldType'],
@@ -532,7 +632,7 @@ class Builder extends Component
                 'default_value' => $data['fieldDefaultValue'] ?: null,
                 'help' => $data['fieldHelp'] ?: null,
                 'is_required' => $data['fieldIsRequired'],
-                'order' => $data['fieldOrder'],
+                'order' => $order,
             ],
         );
 
@@ -598,7 +698,7 @@ class Builder extends Component
     {
         $this->reset([
             'editingFieldId', 'fieldName', 'fieldKey', 'fieldType',
-            'fieldOptions', 'fieldIsRequired', 'fieldSectionId', 'fieldOrder',
+            'fieldOptions', 'fieldIsRequired', 'fieldSectionId',
             'fieldPlaceholder', 'fieldDefaultValue', 'fieldHelp',
         ]);
         $this->fieldType = AssetFieldType::Text->value;
@@ -680,7 +780,8 @@ class Builder extends Component
         return view('livewire.asset-categories.builder', [
             'category' => $this->assetCategory,
             'sectionTree' => $this->sectionTree($allSections),
-            'fields' => $this->assetCategory->fields()->with('section')->get(),
+            'fields' => $this->assetCategory->fields()->with('section')
+                ->orderBy('asset_section_id')->orderBy('order')->get(),
             'parentOptions' => $this->sectionsForSelect(),
             'sectionOptions' => $this->sectionsForSelect(),
             'displayFieldOptions' => $this->displayFieldOptions(),

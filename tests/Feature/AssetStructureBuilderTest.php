@@ -36,7 +36,6 @@ class AssetStructureBuilderTest extends TestCase
             ->set('sectionKind', Builder::KIND_SECTION)
             ->set('sectionName', 'Sprzęt')
             ->set('sectionKey', 'sprzet')
-            ->set('sectionOrder', 0)
             ->call('saveSection')
             ->assertHasNoErrors();
 
@@ -262,5 +261,60 @@ class AssetStructureBuilderTest extends TestCase
             'id' => $section->id,
             'is_active' => false,
         ]);
+    }
+
+    public function test_new_top_level_section_lands_on_top_and_buttons_reorder(): void
+    {
+        $first = AssetSection::factory()->forCategory($this->category)->create(['order' => 0]);
+
+        $component = Livewire::test(Builder::class, ['assetCategory' => $this->category])
+            ->set('sectionKind', Builder::KIND_SECTION)
+            ->set('sectionName', 'Nowa sekcja')
+            ->call('saveSection')
+            ->assertHasNoErrors();
+
+        $new = AssetSection::where('asset_category_id', $this->category->id)
+            ->where('name', 'Nowa sekcja')->firstOrFail();
+
+        // Nowy węzeł trafia na górę swojego poziomu (mniejszy order niż istniejący).
+        $this->assertLessThan($first->order, $new->order);
+
+        // Przycisk „w dół" zamienia węzeł miejscami z sąsiadem i normalizuje 0..n.
+        $component->call('moveSectionDown', $new->id);
+
+        $orderedIds = AssetSection::where('asset_category_id', $this->category->id)
+            ->whereNull('parent_id')
+            ->orderBy('order')->orderBy('id')->pluck('id')->all();
+
+        $this->assertSame([$first->id, $new->id], $orderedIds);
+    }
+
+    public function test_new_field_lands_on_top_and_buttons_reorder(): void
+    {
+        $section = AssetSection::factory()->forCategory($this->category)->create();
+        $existing = AssetField::factory()->forCategory($this->category)->create([
+            'asset_section_id' => $section->id,
+            'order' => 0,
+        ]);
+
+        $component = Livewire::test(Builder::class, ['assetCategory' => $this->category])
+            ->set('fieldName', 'Nowe pole')
+            ->set('fieldType', AssetFieldType::Text->value)
+            ->set('fieldSectionId', $section->id)
+            ->call('saveField')
+            ->assertHasNoErrors();
+
+        $new = AssetField::where('asset_category_id', $this->category->id)
+            ->where('name', 'Nowe pole')->firstOrFail();
+
+        $this->assertLessThan($existing->order, $new->order);
+
+        $component->call('moveFieldDown', $new->id);
+
+        $orderedIds = AssetField::where('asset_category_id', $this->category->id)
+            ->where('asset_section_id', $section->id)
+            ->orderBy('order')->orderBy('id')->pluck('id')->all();
+
+        $this->assertSame([$existing->id, $new->id], $orderedIds);
     }
 }

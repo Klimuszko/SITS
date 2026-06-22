@@ -5,9 +5,7 @@
 <div class="tree-node" style="margin-left:{{ $depth * 22 }}px;padding:8px 0;border-bottom:1px solid var(--border, #eee)">
     <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:8px">
-            <span class="muted">#{{ $node->order }}</span>
             <strong>{{ $node->name }}</strong>
-            <span class="muted">({{ $node->key }})</span>
 
             @if ($node->is_repeatable)
                 <span class="badge badge--blue">Grupa powtarzalna</span>
@@ -26,6 +24,8 @@
         </div>
 
         <div style="display:flex;gap:6px">
+            <button type="button" class="btn btn--ghost btn--sm" wire:click="moveSectionUp({{ $node->id }})" title="Przenieś wyżej" aria-label="Przenieś wyżej">↑</button>
+            <button type="button" class="btn btn--ghost btn--sm" wire:click="moveSectionDown({{ $node->id }})" title="Przenieś niżej" aria-label="Przenieś niżej">↓</button>
             <button type="button" class="btn btn--ghost btn--sm" wire:click="editSection({{ $node->id }})">Edytuj</button>
             @if ($node->is_active)
                 <button type="button" class="btn btn--ghost btn--sm"
