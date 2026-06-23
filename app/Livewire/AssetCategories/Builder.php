@@ -23,6 +23,11 @@ class Builder extends Component
 {
     public AssetCategory $assetCategory;
 
+    // Kontekstowe formularze (Faza 3 — jedno drzewo): naraz otwarty co najwyżej
+    // jeden formularz, odsłaniany przyciskami „+ …" lub „Edytuj".
+    public bool $showSectionForm = false;
+    public bool $showFieldForm = false;
+
     /* ------------------------------ Węzły ----------------------------- */
     // Węzeł = wiersz asset_sections: Sekcja | Podsekcja | Grupa powtarzalna.
 
@@ -174,6 +179,40 @@ class Builder extends Component
         $this->sectionTicketLabel = $section->ticket_label;
         $this->sectionDisplayFieldId = $section->display_field_id;
         $this->sectionLinkParentOnSelect = $section->link_parent_on_select;
+
+        $this->showSectionForm = true;
+        $this->showFieldForm = false;
+        $this->resetValidation();
+    }
+
+    /** Odsłania pusty formularz nowej sekcji najwyższego poziomu. */
+    public function addTopSection(): void
+    {
+        $this->prepareSectionForm(self::KIND_SECTION, null);
+    }
+
+    /** Odsłania formularz nowej podsekcji z rodzicem ustawionym na wskazany węzeł. */
+    public function addSubsection(int $parentId): void
+    {
+        $this->prepareSectionForm(self::KIND_SUBSECTION, $parentId);
+    }
+
+    /** Odsłania formularz nowej grupy powtarzalnej z rodzicem = wskazany węzeł. */
+    public function addGroup(int $parentId): void
+    {
+        $this->prepareSectionForm(self::KIND_GROUP, $parentId);
+    }
+
+    /** Czyści formularz węzła i ustawia rodzaj/rodzica, po czym go odsłania. */
+    protected function prepareSectionForm(string $kind, ?int $parentId): void
+    {
+        $this->authorize('manage-categories');
+
+        $this->resetSectionForm();
+        $this->sectionKind = $kind;
+        $this->sectionParentId = $parentId;
+        $this->showSectionForm = true;
+        $this->showFieldForm = false;
     }
 
     public function saveSection(): void
@@ -539,7 +578,7 @@ class Builder extends Component
             'editingSectionId', 'sectionName', 'sectionKey', 'sectionIcon', 'sectionParentId',
             'sectionMinEntries', 'sectionMaxEntries',
             'sectionIsTicketLinkable', 'sectionTicketLabel', 'sectionDisplayFieldId',
-            'sectionLinkParentOnSelect',
+            'sectionLinkParentOnSelect', 'showSectionForm',
         ]);
         $this->sectionKind = self::KIND_SECTION;
         $this->resetValidation();
@@ -680,6 +719,21 @@ class Builder extends Component
         $this->fieldPlaceholder = $field->placeholder;
         $this->fieldDefaultValue = $field->default_value;
         $this->fieldHelp = $field->help;
+
+        $this->showFieldForm = true;
+        $this->showSectionForm = false;
+        $this->resetValidation();
+    }
+
+    /** Odsłania pusty formularz nowego pola, opcjonalnie przypiętego do węzła. */
+    public function addField(?int $sectionId = null): void
+    {
+        $this->authorize('manage-categories');
+
+        $this->resetFieldForm();
+        $this->fieldSectionId = $sectionId;
+        $this->showFieldForm = true;
+        $this->showSectionForm = false;
     }
 
     public function saveField(): void
@@ -833,7 +887,7 @@ class Builder extends Component
         $this->reset([
             'editingFieldId', 'fieldName', 'fieldKey', 'fieldType',
             'fieldOptions', 'fieldIsRequired', 'fieldSectionId',
-            'fieldPlaceholder', 'fieldDefaultValue', 'fieldHelp',
+            'fieldPlaceholder', 'fieldDefaultValue', 'fieldHelp', 'showFieldForm',
         ]);
         $this->fieldType = AssetFieldType::Text->value;
         $this->resetValidation();
@@ -909,13 +963,15 @@ class Builder extends Component
 
     public function render()
     {
-        $allSections = $this->assetCategory->sections()->with('displayField')->get();
+        // Pola doładowane do węzłów (pokazywane pod swoim węzłem w drzewie).
+        $allSections = $this->assetCategory->sections()->with(['displayField', 'fields'])->get();
 
         return view('livewire.asset-categories.builder', [
             'category' => $this->assetCategory,
             'sectionTree' => $this->sectionTree($allSections),
-            'fields' => $this->assetCategory->fields()->with('section')
-                ->orderBy('asset_section_id')->orderBy('order')->get(),
+            // Pola bez przypisanego węzła — listowane osobno pod drzewem.
+            'looseFields' => $this->assetCategory->fields()
+                ->whereNull('asset_section_id')->orderBy('order')->get(),
             'parentOptions' => $this->sectionsForSelect(),
             'sectionOptions' => $this->sectionsForSelect(),
             'displayFieldOptions' => $this->displayFieldOptions(),
