@@ -399,6 +399,41 @@ class Builder extends Component
     }
 
     /**
+     * Ustawia element $movedId bezpośrednio ZA $afterId w obrębie rodzeństwa
+     * i normalizuje kolejność do spójnego 0..n. Wspólne dla pól i węzłów —
+     * używane przy duplikacji, by kopia pojawiła się tuż pod oryginałem.
+     */
+    protected function placeAfter($query, int $afterId, int $movedId): void
+    {
+        $items = $query->orderBy('order')->orderBy('id')->get();
+        $moved = $items->firstWhere('id', $movedId);
+
+        if ($moved === null) {
+            return;
+        }
+
+        $ordered = collect();
+        foreach ($items->reject(fn ($i) => $i->getKey() === $movedId) as $item) {
+            $ordered->push($item);
+            if ($item->getKey() === $afterId) {
+                $ordered->push($moved);
+            }
+        }
+
+        // Fallback: gdyby oryginał nie znalazł się w zbiorze — kopia na koniec.
+        if (! $ordered->contains(fn ($i) => $i->getKey() === $movedId)) {
+            $ordered->push($moved);
+        }
+
+        foreach ($ordered->values() as $position => $item) {
+            if ((int) $item->order !== $position) {
+                $item->order = $position;
+                $item->save();
+            }
+        }
+    }
+
+    /**
      * Dezaktywacja węzła (is_active=false). NIE kasujemy twardo — twarde
      * usunięcie zerwałoby parent_id potomków (nullOnDelete) i osierociło pola.
      */
@@ -491,11 +526,8 @@ class Builder extends Component
         $fieldMap = [];      // staryFieldId => nowyFieldId
         $groupsToRemap = []; // [nowaSekcja, staryDisplayFieldId]
 
-        $rootOrder = $this->topOrder(
-            $this->assetCategory->sections()->where('parent_id', $root->parent_id)
-        );
-
-        $this->copySectionTree($root, $root->parent_id, true, $rootOrder, $fieldMap, $groupsToRemap);
+        // Kopia startuje z kolejnością oryginału; placeAfter ustawi ją tuż za nim.
+        $copy = $this->copySectionTree($root, $root->parent_id, true, (int) $root->order, $fieldMap, $groupsToRemap);
 
         foreach ($groupsToRemap as [$section, $oldDisplayId]) {
             if (isset($fieldMap[$oldDisplayId])) {
@@ -503,6 +535,12 @@ class Builder extends Component
                 $section->save();
             }
         }
+
+        $this->placeAfter(
+            $this->assetCategory->sections()->where('parent_id', $root->parent_id),
+            $root->id,
+            $copy->id,
+        );
 
         session()->flash('status', 'Skopiowano węzeł wraz z podelementami.');
     }
@@ -796,7 +834,8 @@ class Builder extends Component
 
     /**
      * Duplikuje pojedyncze pole w obrębie tego samego węzła. Kopia: nazwa z
-     * sufiksem „(kopia)", nowy unikalny klucz, na górze swojego węzła.
+     * sufiksem „(kopia)", nowy unikalny klucz, ustawiona bezpośrednio pod
+     * oryginałem (naturalne miejsce do natychmiastowej edycji).
      */
     public function duplicateField(int $id): void
     {
@@ -808,7 +847,7 @@ class Builder extends Component
             return;
         }
 
-        AssetField::create([
+        $copy = AssetField::create([
             'asset_category_id' => $this->assetCategory->id,
             'asset_section_id' => $field->asset_section_id,
             'name' => $field->name.' (kopia)',
@@ -819,11 +858,15 @@ class Builder extends Component
             'default_value' => $field->default_value,
             'help' => $field->help,
             'is_required' => $field->is_required,
-            'order' => $this->topOrder(
-                $this->assetCategory->fields()->where('asset_section_id', $field->asset_section_id)
-            ),
+            'order' => (int) $field->order,
             'is_active' => $field->is_active,
         ]);
+
+        $this->placeAfter(
+            $this->assetCategory->fields()->where('asset_section_id', $field->asset_section_id),
+            $field->id,
+            $copy->id,
+        );
 
         session()->flash('status', 'Skopiowano pole.');
     }

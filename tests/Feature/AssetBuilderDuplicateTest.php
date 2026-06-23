@@ -31,27 +31,50 @@ class AssetBuilderDuplicateTest extends TestCase
         $this->category = AssetCategory::factory()->create();
     }
 
-    public function test_duplicate_field_copies_within_same_section_with_new_key_on_top(): void
+    public function test_duplicate_field_places_copy_directly_after_original(): void
     {
         $section = AssetSection::factory()->forCategory($this->category)->create();
-        $field = AssetField::factory()->forCategory($this->category)->create([
-            'asset_section_id' => $section->id,
-            'name' => 'Adres IP',
-            'key' => 'ip',
-            'order' => 0,
+        AssetField::factory()->forCategory($this->category)->create([
+            'asset_section_id' => $section->id, 'name' => 'A', 'key' => 'a', 'order' => 0,
+        ]);
+        $b = AssetField::factory()->forCategory($this->category)->create([
+            'asset_section_id' => $section->id, 'name' => 'B', 'key' => 'b', 'order' => 1,
         ]);
 
+        // Kopiujemy OSTATNI element grupy — kopia ma trafić tuż pod niego, nie na górę.
         Livewire::test(Builder::class, ['assetCategory' => $this->category])
-            ->call('duplicateField', $field->id)
+            ->call('duplicateField', $b->id)
             ->assertHasNoErrors();
 
         $copy = AssetField::where('asset_category_id', $this->category->id)
-            ->where('name', 'Adres IP (kopia)')->firstOrFail();
+            ->where('name', 'B (kopia)')->firstOrFail();
 
         $this->assertSame($section->id, $copy->asset_section_id);
-        $this->assertNotSame('ip', $copy->key);
-        // Nowa kopia ląduje na górze swojego węzła (mniejszy order niż oryginał).
-        $this->assertLessThan($field->order, $copy->order);
+        $this->assertNotSame('b', $copy->key);
+
+        $orderedNames = AssetField::where('asset_category_id', $this->category->id)
+            ->where('asset_section_id', $section->id)
+            ->orderBy('order')->orderBy('id')->pluck('name')->all();
+
+        $this->assertSame(['A', 'B', 'B (kopia)'], $orderedNames);
+    }
+
+    public function test_duplicate_section_places_copy_directly_after_original(): void
+    {
+        AssetSection::factory()->forCategory($this->category)->create(['name' => 'S1', 'order' => 0]);
+        $s2 = AssetSection::factory()->forCategory($this->category)->create(['name' => 'S2', 'order' => 1]);
+        AssetSection::factory()->forCategory($this->category)->create(['name' => 'S3', 'order' => 2]);
+
+        // Kopiujemy środkowy węzeł — kopia ma stanąć bezpośrednio za nim.
+        Livewire::test(Builder::class, ['assetCategory' => $this->category])
+            ->call('duplicateSection', $s2->id)
+            ->assertHasNoErrors();
+
+        $orderedNames = AssetSection::where('asset_category_id', $this->category->id)
+            ->whereNull('parent_id')
+            ->orderBy('order')->orderBy('id')->pluck('name')->all();
+
+        $this->assertSame(['S1', 'S2', 'S2 (kopia)', 'S3'], $orderedNames);
     }
 
     public function test_duplicate_section_deep_copies_subtree_fields_and_remaps_display_field(): void

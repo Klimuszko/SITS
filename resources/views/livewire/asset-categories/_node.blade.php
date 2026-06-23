@@ -68,15 +68,6 @@
             @include('livewire.asset-categories._field-row', ['field' => $field, 'canForceDelete' => $canForceDelete])
         @endforeach
 
-        {{-- Dodawanie w kontekście tego węzła. --}}
-        <div class="tree-add">
-            <button type="button" class="btn btn--ghost btn--sm" wire:click="addField({{ $node->id }})">+ Pole</button>
-            @if ($depth < 2)
-                <button type="button" class="btn btn--ghost btn--sm" wire:click="addSubsection({{ $node->id }})">+ Podsekcja</button>
-                <button type="button" class="btn btn--ghost btn--sm" wire:click="addGroup({{ $node->id }})">+ Grupa powtarzalna</button>
-            @endif
-        </div>
-
         {{-- Potomne węzły. --}}
         @foreach ($node->childNodes as $child)
             @include('livewire.asset-categories._node', ['node' => $child, 'depth' => $depth + 1, 'canForceDelete' => $canForceDelete])

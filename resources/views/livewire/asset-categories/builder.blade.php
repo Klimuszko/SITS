@@ -20,10 +20,13 @@
                     <h2 style="margin:0">Struktura i pola</h2>
                     <p class="muted" style="margin:4px 0 0">
                         Drzewo węzłów: <strong>Sekcje</strong> → (<strong>Podsekcje</strong> | <strong>Grupy powtarzalne</strong>) → pola.
-                        Pola i pod-węzły dodajesz bezpośrednio przy wybranym węźle.
+                        Dodawaj przyciskami u góry; rodzaj węzła i węzeł nadrzędny wybierzesz w formularzu.
                     </p>
                 </div>
-                <button type="button" class="btn btn--primary btn--sm" wire:click="addTopSection">+ Sekcja</button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button type="button" class="btn btn--primary btn--sm" wire:click="addTopSection">+ Sekcja</button>
+                    <button type="button" class="btn btn--ghost btn--sm" wire:click="addField">+ Pole</button>
+                </div>
             </div>
 
             {{-- ----------------------- Formularz węzła (kontekstowy) ----------------------- --}}
@@ -239,7 +242,6 @@
             <div class="tree-loose">
                 <div class="tree-loose__head">
                     <strong>Pola bez węzła</strong>
-                    <button type="button" class="btn btn--ghost btn--sm" wire:click="addField">+ Pole</button>
                 </div>
                 @forelse ($looseFields as $field)
                     @include('livewire.asset-categories._field-row', ['field' => $field, 'canForceDelete' => $canForceDelete])
