@@ -17,71 +17,64 @@
         <div class="alert alert--success">{{ session('status') }}</div>
     @endif
 
-    {{-- Górny pasek: Status + Akcje (poziomo) nad układem — uwalnia szerokość
-         dla menu i treści poniżej. --}}
-    <div class="asset-top">
-        @if ($canUpdate || $canArchive)
-            <div class="card">
-                <div class="card__head">Akcje</div>
-                <div class="card__body stack" style="gap:10px">
-                    @if ($canUpdate)
-                        <a href="{{ route('assets.edit', $asset) }}" wire:navigate class="btn btn--primary btn--sm">Edytuj</a>
-                    @endif
+    {{-- Górny pasek: tylko akcje. Status/Info przeniesione do menu kategorii. --}}
+    @if ($canUpdate || $canArchive || $canForceDelete)
+        <div class="asset-top">
+            @if ($canUpdate || $canArchive)
+                <div class="card">
+                    <div class="card__head">Akcje</div>
+                    <div class="card__body stack" style="gap:10px">
+                        @if ($canUpdate)
+                            <a href="{{ route('assets.edit', $asset) }}" wire:navigate class="btn btn--primary btn--sm">Edytuj</a>
+                        @endif
 
-                    @if ($canArchive && $asset->status !== \App\Enums\AssetStatus::Archived)
-                        <button class="btn btn--ghost btn--sm" wire:click="archive"
-                            wire:confirm="Zarchiwizować ten zasób?"
-                            wire:loading.attr="disabled" wire:target="archive">Archiwizuj</button>
-                    @endif
+                        @if ($canArchive && $asset->status !== \App\Enums\AssetStatus::Archived)
+                            <button class="btn btn--ghost btn--sm" wire:click="archive"
+                                wire:confirm="Zarchiwizować ten zasób?"
+                                wire:loading.attr="disabled" wire:target="archive">Archiwizuj</button>
+                        @endif
+                    </div>
                 </div>
-            </div>
-        @endif
+            @endif
 
-        @if ($canForceDelete)
-            <div class="card">
-                <div class="card__head">Strefa niebezpieczna</div>
-                <div class="card__body stack" style="gap:10px">
-                    <button type="button" class="btn btn--danger btn--sm" wire:click="forceDelete"
-                        wire:confirm="Trwale usunie ten zasób WRAZ z wartościami pól, wpisami grup, relacjami, przypisaniami, historią i załącznikami. Powiązane zgłoszenia stracą link do zasobu (zostaną zachowane). Operacja jest nieodwracalna. Kontynuować?"
-                        wire:loading.attr="disabled" wire:target="forceDelete">Usuń trwale</button>
+            @if ($canForceDelete)
+                <div class="card">
+                    <div class="card__head">Strefa niebezpieczna</div>
+                    <div class="card__body stack" style="gap:10px">
+                        <button type="button" class="btn btn--danger btn--sm" wire:click="forceDelete"
+                            wire:confirm="Trwale usunie ten zasób WRAZ z wartościami pól, wpisami grup, relacjami, przypisaniami, historią i załącznikami. Powiązane zgłoszenia stracą link do zasobu (zostaną zachowane). Operacja jest nieodwracalna. Kontynuować?"
+                            wire:loading.attr="disabled" wire:target="forceDelete">Usuń trwale</button>
+                    </div>
                 </div>
-            </div>
-        @endif
-
-        <div class="card">
-            <div class="card__head">Status</div>
-            <div class="card__body stack" style="gap:8px;font-size:14px">
-                <div class="list-row"><span class="muted">Status</span>
-                    <span><span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span></span></div>
-                <div class="list-row"><span class="muted">Prywatny</span><span>{{ $asset->is_private ? 'Tak' : 'Nie' }}</span></div>
-                <div class="list-row"><span class="muted">Aktualizacja</span><span>{{ $asset->updated_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
-            </div>
+            @endif
         </div>
-    </div>
+    @endif
 
-    {{-- Układ 2-kolumnowy: lewe menu kategorii | treść wybranej kategorii. --}}
-    <div class="asset-layout" x-data="{ tab: 'basic' }">
+    {{-- Układ 2-kolumnowy: lewe menu kategorii | treść wybranej kategorii.
+         Domyślnie pierwsza kategoria struktury; gdy brak — Status/Info. --}}
+    @php $defaultTab = $sectionTree->isNotEmpty() ? 'sec0' : 'status'; @endphp
+    <div class="asset-layout" x-data="{ tab: '{{ $defaultTab }}' }">
         {{-- ------------------------- LEWO: menu kategorii ------------------------- --}}
         <nav class="card asset-menu" aria-label="Kategorie zasobu">
-            {{-- Stała kategoria „Podstawowe" (ikona „i"). --}}
-            <button type="button" class="asset-cats__tab"
-                    :class="{ 'is-active': tab === 'basic' }" @click="tab = 'basic'">
-                <span class="asset-cats__icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                </span>
-                <span>Podstawowe</span>
-            </button>
-
             @foreach ($sectionTree as $node)
                 <button type="button" class="asset-cats__tab"
-                        :class="{ 'is-active': tab === {{ $node['section']->id }} }"
-                        @click="tab = {{ $node['section']->id }}">
+                        :class="{ 'is-active': tab === 'sec{{ $loop->index }}' }"
+                        @click="tab = 'sec{{ $loop->index }}'">
                     @if (filled($node['section']->icon))
                         <span class="asset-cats__icon">{!! $node['section']->icon !!}</span>
                     @endif
                     <span>{{ $node['section']->name }}</span>
                 </button>
             @endforeach
+
+            {{-- Status/Info — przedostatnia pozycja (przed Historią), ikona „i". --}}
+            <button type="button" class="asset-cats__tab"
+                    :class="{ 'is-active': tab === 'status' }" @click="tab = 'status'">
+                <span class="asset-cats__icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                </span>
+                <span>Status/Info</span>
+            </button>
 
             {{-- Historia — zawsze na końcu (ikona zegara). --}}
             <button type="button" class="asset-cats__tab"
@@ -96,8 +89,19 @@
         {{-- ----------------------- ŚRODEK: treść kategorii ----------------------- --}}
         <div class="card">
             <div class="card__body">
-                {{-- Podstawowe: dane podstawowe + notatki (domyślnie widoczne). --}}
-                <div x-show="tab === 'basic'" class="stack" style="gap:8px;font-size:14px">
+                {{-- Kategorie ze struktury. Pierwsza widoczna domyślnie (bez x-cloak). --}}
+                @foreach ($sectionTree as $node)
+                    <div x-show="tab === 'sec{{ $loop->index }}'" @unless ($loop->first) x-cloak @endunless
+                         class="stack" style="gap:8px;font-size:14px">
+                        @include('livewire.assets._section', ['node' => $node, 'depth' => 0])
+                    </div>
+                @endforeach
+
+                {{-- Status/Info: status + dane podstawowe + notatki (scalone). --}}
+                <div x-show="tab === 'status'" @if ($sectionTree->isNotEmpty()) x-cloak @endif
+                     class="stack" style="gap:8px;font-size:14px">
+                    <div class="list-row"><span class="muted">Status</span>
+                        <span><span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span></span></div>
                     <div class="list-row"><span class="muted">Organizacja</span><span>{{ $asset->organization?->name ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Kategoria</span><span>{{ $asset->category?->name ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Kod inwentarzowy</span><span>{{ $asset->inventory_code ?? '—' }}</span></div>
@@ -109,7 +113,10 @@
                             @else — @endif
                         </span>
                     </div>
+                    <div class="list-row"><span class="muted">Prywatny</span><span>{{ $asset->is_private ? 'Tak' : 'Nie' }}</span></div>
                     <div class="list-row"><span class="muted">Utworzył</span><span>{{ $asset->createdBy?->name ?? '—' }}</span></div>
+                    <div class="list-row"><span class="muted">Utworzono</span><span>{{ $asset->created_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
+                    <div class="list-row"><span class="muted">Aktualizacja</span><span>{{ $asset->updated_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
                     @if ($asset->notes)
                         <div style="margin-top:10px">
                             <div class="muted" style="font-weight:600;margin-bottom:4px">Notatki</div>
@@ -117,13 +124,6 @@
                         </div>
                     @endif
                 </div>
-
-                {{-- Kategorie ze struktury (ukryte do czasu wyboru). --}}
-                @foreach ($sectionTree as $node)
-                    <div x-show="tab === {{ $node['section']->id }}" x-cloak class="stack" style="gap:8px;font-size:14px">
-                        @include('livewire.assets._section', ['node' => $node, 'depth' => 0])
-                    </div>
-                @endforeach
 
                 {{-- Historia jako kategoria. --}}
                 <div x-show="tab === 'history'" x-cloak class="stack" style="gap:10px;font-size:14px">
