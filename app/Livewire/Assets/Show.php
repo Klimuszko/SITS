@@ -157,6 +157,36 @@ class Show extends Component
     }
 
     /**
+     * Usuwa z drzewa węzły bez danych — końcowy użytkownik nie ogląda pustych
+     * sekcji. „Pusta" = grupa powtarzalna bez wpisów ALBO sekcja, której żadne
+     * pole nie ma wartości (castForDisplay → „—”) i która nie ma żadnej
+     * niepustej podsekcji. Przycinanie jest rekurencyjne (najpierw potomkowie).
+     *
+     * @param  Collection<int,array<string,mixed>>  $nodes
+     * @return Collection<int,array<string,mixed>>
+     */
+    protected function pruneEmpty(Collection $nodes): Collection
+    {
+        return $nodes
+            ->map(function (array $node) {
+                $node['children'] = $this->pruneEmpty(collect($node['children']));
+
+                return $node;
+            })
+            ->filter(function (array $node) {
+                if ($node['group'] !== null) {
+                    return $node['group']['rows']->isNotEmpty();
+                }
+
+                $hasValue = collect($node['fields'])
+                    ->contains(fn ($f) => ($f['value'] ?? '—') !== '—');
+
+                return $hasValue || collect($node['children'])->isNotEmpty();
+            })
+            ->values();
+    }
+
+    /**
      * Buduje REKURENCYJNY widok grupy powtarzalnej dla danego rodzica:
      *  - 'columns'     => aktywne pola grupy,
      *  - 'rows'        => wpisy (sort order) z 'cells' oraz 'children' (zagnieżdżone widoki),
@@ -217,7 +247,8 @@ class Show extends Component
         $this->asset->load(['organization', 'category', 'location', 'parent', 'createdBy']);
 
         return view('livewire.assets.show', [
-            'sectionTree' => $this->sectionTree(),
+            // Tylko sekcje/kategorie z wypełnionymi danymi (puste ukrywamy w widoku).
+            'sectionTree' => $this->pruneEmpty($this->sectionTree()),
             'history' => $this->asset->history()->with('user')->get(),
             'canUpdate' => $user->can('update', $this->asset),
             'canArchive' => $user->can('archive', $this->asset),
