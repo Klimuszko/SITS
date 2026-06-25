@@ -110,4 +110,60 @@ class AssetShowEmptySectionsTest extends TestCase
             ->assertSee('Podsekcja Plyta')
             ->assertSee('WARTOSC-CHIPSET');
     }
+
+    public function test_empty_field_row_is_hidden_within_a_filled_section(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $this->actingAs($admin);
+
+        $organization = Organization::factory()->create();
+        $category = AssetCategory::factory()->create();
+        $section = AssetSection::factory()->forCategory($category)->create(['name' => 'Dane']);
+
+        $filled = AssetField::factory()->forCategory($category)->create([
+            'asset_section_id' => $section->id, 'name' => 'PoleWypelnione', 'type' => AssetFieldType::Text,
+        ]);
+        AssetField::factory()->forCategory($category)->create([
+            'asset_section_id' => $section->id, 'name' => 'PolePuste', 'type' => AssetFieldType::Text,
+        ]);
+
+        $asset = app(AssetService::class)->create($admin, [
+            'organization_id' => $organization->id,
+            'asset_category_id' => $category->id,
+            'name' => 'Serwer 4',
+        ], [
+            $filled->id => 'WIDOCZNE',
+        ]);
+
+        // Sekcja widoczna (ma wypełnione pole), ale puste pole nie pokazuje swojego wiersza.
+        Livewire::test(Show::class, ['asset' => $asset])
+            ->assertSee('PoleWypelnione')
+            ->assertSee('WIDOCZNE')
+            ->assertDontSee('PolePuste');
+    }
+
+    public function test_url_field_is_rendered_as_clickable_link(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $this->actingAs($admin);
+
+        $organization = Organization::factory()->create();
+        $category = AssetCategory::factory()->create();
+        $section = AssetSection::factory()->forCategory($category)->create(['name' => 'Siec']);
+        $url = AssetField::factory()->forCategory($category)->create([
+            'asset_section_id' => $section->id, 'name' => 'URL', 'type' => AssetFieldType::Url,
+        ]);
+
+        $asset = app(AssetService::class)->create($admin, [
+            'organization_id' => $organization->id,
+            'asset_category_id' => $category->id,
+            'name' => 'Serwer 5',
+        ], [
+            $url->id => 'https://glpi.example.com',
+        ]);
+
+        Livewire::test(Show::class, ['asset' => $asset])
+            ->assertSee('href="https://glpi.example.com"', false)
+            ->assertSee('https://glpi.example.com');
+    }
 }

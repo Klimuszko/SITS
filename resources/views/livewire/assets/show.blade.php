@@ -107,17 +107,21 @@
                         <span><span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span></span></div>
                     <div class="list-row"><span class="muted">Organizacja</span><span>{{ $asset->organization?->name ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Kategoria</span><span>{{ $asset->category?->name ?? '—' }}</span></div>
-                    <div class="list-row"><span class="muted">Kod inwentarzowy</span><span>{{ $asset->inventory_code ?? '—' }}</span></div>
-                    <div class="list-row"><span class="muted">Lokalizacja</span><span>{{ $asset->location?->name ?? '—' }}</span></div>
-                    <div class="list-row"><span class="muted">Zasób nadrzędny</span>
-                        <span>
-                            @if ($asset->parent)
-                                <a href="{{ route('assets.show', $asset->parent) }}" wire:navigate>{{ $asset->parent->name }}</a>
-                            @else — @endif
-                        </span>
-                    </div>
+                    @if ($asset->inventory_code)
+                        <div class="list-row"><span class="muted">Kod inwentarzowy</span><span>{{ $asset->inventory_code }}</span></div>
+                    @endif
+                    @if ($asset->location)
+                        <div class="list-row"><span class="muted">Lokalizacja</span><span>{{ $asset->location->name }}</span></div>
+                    @endif
+                    @if ($asset->parent)
+                        <div class="list-row"><span class="muted">Zasób nadrzędny</span>
+                            <span><a href="{{ route('assets.show', $asset->parent) }}" wire:navigate>{{ $asset->parent->name }}</a></span>
+                        </div>
+                    @endif
                     <div class="list-row"><span class="muted">Prywatny</span><span>{{ $asset->is_private ? 'Tak' : 'Nie' }}</span></div>
-                    <div class="list-row"><span class="muted">Utworzył</span><span>{{ $asset->createdBy?->name ?? '—' }}</span></div>
+                    @if ($asset->createdBy)
+                        <div class="list-row"><span class="muted">Utworzył</span><span>{{ $asset->createdBy->name }}</span></div>
+                    @endif
                     <div class="list-row"><span class="muted">Utworzono</span><span>{{ $asset->created_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Aktualizacja</span><span>{{ $asset->updated_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
                     </div>{{-- /asset-defs --}}

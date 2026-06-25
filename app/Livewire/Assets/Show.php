@@ -119,6 +119,7 @@ class Show extends Component
                 return [
                     'label' => $field->name,
                     'value' => $this->castForDisplay($field, $singleValues->get($field->id)?->value),
+                    'type' => $field->type->value,
                 ];
             })->values();
 
@@ -139,6 +140,7 @@ class Show extends Component
                 return [
                     'label' => $field->name,
                     'value' => $this->castForDisplay($field, $singleValues->get($field->id)?->value),
+                    'type' => $field->type->value,
                 ];
             })->values();
 

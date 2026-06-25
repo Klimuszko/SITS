@@ -27,7 +27,14 @@
                     <tr>
                         <td class="muted">#{{ $i + 1 }}</td>
                         @foreach ($view['columns'] as $col)
-                            <td>{{ $row['cells'][$col->id] ?? '—' }}</td>
+                            @php($v = $row['cells'][$col->id] ?? '—')
+                            <td>
+                                @if ($col->type->value === 'url' && $v !== '—' && \Illuminate\Support\Str::startsWith($v, ['http://', 'https://']))
+                                    <a href="{{ $v }}" target="_blank" rel="noopener noreferrer">{{ $v }}</a>
+                                @else
+                                    {{ $v }}
+                                @endif
+                            </td>
                         @endforeach
                     </tr>
                 @endforeach
@@ -42,10 +49,14 @@
                 <span>{{ $label }}</span>
             </div>
 
-            @if ($view['columns']->isNotEmpty())
+            @if (collect($view['columns'])->contains(fn ($c) => (($row['cells'][$c->id] ?? '—') !== '—')))
                 <div class="asset-defs">
                     @foreach ($view['columns'] as $col)
-                        <div class="list-row"><span class="muted">{{ $col->name }}</span><span>{{ $row['cells'][$col->id] ?? '—' }}</span></div>
+                        @include('livewire.assets._def-row', ['field' => [
+                            'label' => $col->name,
+                            'value' => $row['cells'][$col->id] ?? '—',
+                            'type' => $col->type->value,
+                        ]])
                     @endforeach
                 </div>
             @endif

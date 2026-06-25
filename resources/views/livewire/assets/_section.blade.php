@@ -13,11 +13,13 @@
         @if ($node['group'])
             @include('livewire.assets._group-view', ['view' => $node['group'], 'label' => $section->name, 'depth' => 0])
         @elseif ($node['fields']->isNotEmpty())
-            <div class="asset-defs">
-                @foreach ($node['fields'] as $field)
-                    <div class="list-row"><span class="muted">{{ $field['label'] }}</span><span>{{ $field['value'] }}</span></div>
-                @endforeach
-            </div>
+            @if (collect($node['fields'])->contains(fn ($f) => ($f['value'] ?? '—') !== '—'))
+                <div class="asset-defs">
+                    @foreach ($node['fields'] as $field)
+                        @include('livewire.assets._def-row', ['field' => $field])
+                    @endforeach
+                </div>
+            @endif
         @endif
 
         @foreach ($node['children'] as $child)
@@ -36,10 +38,10 @@
             @if ($node['group'])
                 @include('livewire.assets._group-view', ['view' => $node['group'], 'label' => $section->name, 'depth' => 0])
             @else
-                @if ($node['fields']->isNotEmpty())
+                @if (collect($node['fields'])->contains(fn ($f) => ($f['value'] ?? '—') !== '—'))
                     <div class="asset-defs">
                         @foreach ($node['fields'] as $field)
-                            <div class="list-row"><span class="muted">{{ $field['label'] }}</span><span>{{ $field['value'] }}</span></div>
+                            @include('livewire.assets._def-row', ['field' => $field])
                         @endforeach
                     </div>
                 @endif
