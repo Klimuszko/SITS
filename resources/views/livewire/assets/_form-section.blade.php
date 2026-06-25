@@ -16,9 +16,9 @@
 @php($groupLevel = $groupLevel ?? 0)
 @php($maxDepth = \App\Services\AssetStructure::MAX_GROUP_DEPTH)
 
-<div class="stack" style="gap:12px;{{ $depth > 0 ? 'margin-left:14px;border-left:2px solid var(--border,#eee);padding-left:12px' : '' }}">
+<div class="stack fs-node{{ $depth > 0 ? ' fs-node--nested' : '' }}" style="gap:12px">
     @if ($depth > 0 && ! $node->is_repeatable)
-        <div class="muted" style="font-weight:600">{{ $node->name }}</div>
+        <div class="fs-subhead">{{ $node->name }} <span class="fs-subhead__kind">podsekcja</span></div>
     @endif
 
     @if ($node->is_repeatable)
@@ -31,8 +31,8 @@
         @php($childGroups = $thisLevel < $maxDepth ? $node->childNodes->where('is_repeatable', true) : collect())
 
         <div wire:key="group-{{ $rowsPath }}">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
-                <strong>{{ $depth > 0 ? $node->name : '' }}</strong>
+            <div class="fs-group-head">
+                <strong class="fs-subhead">@if ($depth > 0){{ $node->name }} <span class="fs-subhead__kind">grupa powtarzalna</span>@endif</strong>
                 <button type="button" class="btn btn--ghost btn--sm"
                         wire:click="addRow('{{ $rowsPath }}')"
                         @disabled($max !== null && count($rows) >= $max)>
@@ -47,10 +47,10 @@
             @else
                 <div class="stack" style="gap:14px">
                     @foreach ($rows as $index => $row)
-                        <div class="card" style="background:transparent" wire:key="group-{{ $rowsPath }}-row-{{ $index }}">
+                        <div class="card fs-entry" wire:key="group-{{ $rowsPath }}-row-{{ $index }}">
                             <div class="card__body">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                                    <strong class="muted">{{ $label }} #{{ $index + 1 }}</strong>
+                                <div class="fs-entry__head">
+                                    <strong>{{ $label }} #{{ $index + 1 }}</strong>
                                     <button type="button" class="btn btn--ghost btn--sm"
                                             wire:click="removeRow('{{ $rowsPath }}', {{ $index }})"
                                             @disabled(count($rows) <= $min)>

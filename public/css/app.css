@@ -557,3 +557,26 @@ html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180de
 
 .tree-loose { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
 .tree-loose__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* ===================== Formularz zasobu: czytelne zagniezdzone sekcje ===================== */
+.fs-subhead { font-weight: 700; font-size: 14px; color: var(--text); }
+.fs-subhead__kind {
+    font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 1px 8px; margin-left: 6px; white-space: nowrap;
+}
+.fs-group-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+
+/* Podsekcja / grupa zagniezdzona — wyrazny panel zamiast samej cienkiej kreski. */
+.fs-node--nested {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--primary);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+}
+
+/* Wpis grupy powtarzalnej — odrebna karta na jasnym tle (kontrast wzgledem panelu). */
+.fs-entry { background: var(--surface); border: 1px solid var(--border); }
+.fs-entry__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
