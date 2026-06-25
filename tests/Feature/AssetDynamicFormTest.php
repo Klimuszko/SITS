@@ -156,7 +156,8 @@ class AssetDynamicFormTest extends TestCase
             ->call('addRow', $section->id)
             ->call('addRow', $section->id);
         $this->assertCount(4, $component->get('groups')[$section->id]);
-        $component->assertSee('VM #4');
+        // Numer wpisu renderowany jako badge „#N" obok etykiety „VM".
+        $component->assertSee('VM')->assertSee('#4')->assertDontSee('#5');
 
         // Usuń wszystkie — zawsze indeks 0 (tablica reindeksuje się po każdym usunięciu).
         $component->call('removeRow', $section->id, 0)
@@ -168,9 +169,9 @@ class AssetDynamicFormTest extends TestCase
         // Kolejny wiersz musi być „#1", nie „#5".
         $component->call('addRow', $section->id);
         $this->assertCount(1, $component->get('groups')[$section->id]);
-        $component->assertSee('VM #1');
-        $component->assertDontSee('VM #5');
-        $component->assertDontSee('VM #2');
+        $component->assertSee('#1');
+        $component->assertDontSee('#5');
+        $component->assertDontSee('#2');
     }
 
     public function test_required_single_field_blank_fails_validation(): void
