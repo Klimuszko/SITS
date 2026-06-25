@@ -18,7 +18,7 @@
 
 <div class="stack fs-node{{ $depth > 0 ? ' fs-node--nested' : '' }}" style="gap:12px">
     @if ($depth > 0 && ! $node->is_repeatable)
-        <div class="fs-subhead">{{ $node->name }} <span class="fs-subhead__kind">podsekcja</span></div>
+        <div class="fs-subhead fs-subhead--block">{{ $node->name }} <span class="fs-subhead__kind">podsekcja</span></div>
     @endif
 
     @if ($node->is_repeatable)
@@ -50,7 +50,10 @@
                         <div class="card fs-entry" wire:key="group-{{ $rowsPath }}-row-{{ $index }}">
                             <div class="card__body">
                                 <div class="fs-entry__head">
-                                    <strong>{{ $label }} #{{ $index + 1 }}</strong>
+                                    <span class="fs-entry__title">
+                                        <span class="fs-entry__badge">#{{ $index + 1 }}</span>
+                                        {{ $label }}
+                                    </span>
                                     <button type="button" class="btn btn--ghost btn--sm"
                                             wire:click="removeRow('{{ $rowsPath }}', {{ $index }})"
                                             @disabled(count($rows) <= $min)>

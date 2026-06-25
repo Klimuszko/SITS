@@ -558,25 +558,49 @@ html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180de
 .tree-loose { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
 .tree-loose__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
-/* ===================== Formularz zasobu: czytelne zagniezdzone sekcje ===================== */
-.fs-subhead { font-weight: 700; font-size: 14px; color: var(--text); }
-.fs-subhead__kind {
-    font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
-    color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 999px; padding: 1px 8px; margin-left: 6px; white-space: nowrap;
-}
-.fs-group-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+/* ===================== Formularz zasobu: czytelne sekcje i grupy ===================== */
 
-/* Podsekcja / grupa zagniezdzona — wyrazny panel zamiast samej cienkiej kreski. */
-.fs-node--nested {
-    margin-top: 14px;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--primary);
-    border-radius: var(--radius-sm);
+/* Naglowek sekcji najwyzszego poziomu — pasek tytulu na delikatnym tle + lewy akcent. */
+.form-section > .card__head {
     background: var(--surface-2);
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+.form-section > .card__head::before {
+    content: ""; align-self: stretch; width: 4px; margin: -2px 12px -2px -2px;
+    border-radius: 999px; background: var(--primary);
 }
 
-/* Wpis grupy powtarzalnej — odrebna karta na jasnym tle (kontrast wzgledem panelu). */
+/* Wspolny naglowek podsekcji / grupy. */
+.fs-subhead { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: var(--text); }
+.fs-subhead__kind {
+    font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--primary-dark); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 2px 8px; white-space: nowrap;
+}
+/* Naglowek podsekcji (depth>0) blokowy — z hairline pod spodem. */
+.fs-subhead--block { display: flex; margin-bottom: 2px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
+.fs-group-head {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed var(--border);
+}
+
+/* Podsekcja / grupa zagniezdzona — panel z lewym akcentem; naprzemienne tlo w glab. */
+.fs-node--nested {
+    margin-top: 14px; padding: 14px;
+    border: 1px solid var(--border); border-left: 3px solid var(--primary);
+    border-radius: var(--radius-sm); background: var(--surface-2);
+}
+.fs-node--nested .fs-node--nested { background: var(--surface); }
+
+/* Wpis grupy powtarzalnej — biala karta z numerem porzadkowym (badge). */
 .fs-entry { background: var(--surface); border: 1px solid var(--border); }
-.fs-entry__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.fs-entry__head {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.fs-entry__title { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--text); }
+.fs-entry__badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 26px; height: 22px; padding: 0 7px; border-radius: 999px;
+    background: var(--primary); color: var(--on-primary); font-size: 12px; font-weight: 700;
+}

@@ -96,7 +96,7 @@
         @if ($asset_category_id)
             {{-- Pola bez sekcji (kategorie „płaskie” ze Step 3). --}}
             @if ($looseFields->isNotEmpty())
-                <div class="card" style="margin-top:18px">
+                <div class="card form-section" style="margin-top:18px">
                     <div class="card__head">Pola kategorii</div>
                     <div class="card__body">
                         <div class="form-grid">
@@ -115,7 +115,7 @@
 
             {{-- Sekcje, podsekcje i grupy powtarzalne w kolejności struktury. --}}
             @foreach ($tree as $node)
-                <div class="card" style="margin-top:18px" wire:key="section-{{ $node->id }}">
+                <div class="card form-section" style="margin-top:18px" wire:key="section-{{ $node->id }}">
                     <div class="card__head">{{ $node->name }}</div>
                     <div class="card__body">
                         @include('livewire.assets._form-section', ['node' => $node, 'depth' => 0])
