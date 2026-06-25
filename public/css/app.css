@@ -604,3 +604,28 @@ html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180de
     min-width: 26px; height: 22px; padding: 0 7px; border-radius: 999px;
     background: var(--primary); color: var(--on-primary); font-size: 12px; font-weight: 700;
 }
+
+/* ===================== Widok zasobu: bloki kategorii (podsekcje / grupy) ===================== */
+.asset-content__title { margin: 0 0 14px; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+
+/* Lista definicji (etykieta -> wartosc). */
+.asset-defs { display: flex; flex-direction: column; }
+.asset-defs .list-row { padding: 9px 2px; }
+
+/* Blok podsekcji / grupy — wyrazny panel z naglowkiem. */
+.asset-block { border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
+.asset-block + .asset-block, .asset-defs + .asset-block { margin-top: 14px; }
+.asset-block .asset-block { margin-top: 12px; }
+.asset-block__head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.asset-block__title { font-weight: 700; font-size: 14px; color: var(--text); }
+.asset-block__count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-size: 12px; font-weight: 700; }
+.asset-block__body { padding: 12px 14px; }
+.asset-block__body--flush { padding: 0; }
+
+/* Tabela wewnatrz bloku — wyrozniony naglowek kolumn. */
+.asset-block .table thead th { background: var(--surface-2); }
+
+/* Wpis grupy z pod-grupami. */
+.asset-entry { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); padding: 12px 14px; }
+.asset-entry + .asset-entry { margin-top: 10px; }
+.asset-entry__head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; margin-bottom: 8px; }

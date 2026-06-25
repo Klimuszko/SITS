@@ -92,14 +92,17 @@
                 {{-- Kategorie ze struktury. Pierwsza widoczna domyślnie (bez x-cloak). --}}
                 @foreach ($sectionTree as $node)
                     <div x-show="tab === 'sec{{ $loop->index }}'" @unless ($loop->first) x-cloak @endunless
-                         class="stack" style="gap:8px;font-size:14px">
+                         style="font-size:14px">
+                        <h2 class="asset-content__title">{{ $node['section']->name }}</h2>
                         @include('livewire.assets._section', ['node' => $node, 'depth' => 0])
                     </div>
                 @endforeach
 
                 {{-- Status/Info: status + dane podstawowe + notatki (scalone). --}}
                 <div x-show="tab === 'status'" @if ($sectionTree->isNotEmpty()) x-cloak @endif
-                     class="stack" style="gap:8px;font-size:14px">
+                     style="font-size:14px">
+                    <h2 class="asset-content__title">Status / informacje</h2>
+                    <div class="asset-defs">
                     <div class="list-row"><span class="muted">Status</span>
                         <span><span class="badge badge--{{ $asset->status->color() }}">{{ $asset->status->label() }}</span></span></div>
                     <div class="list-row"><span class="muted">Organizacja</span><span>{{ $asset->organization?->name ?? '—' }}</span></div>
@@ -117,8 +120,9 @@
                     <div class="list-row"><span class="muted">Utworzył</span><span>{{ $asset->createdBy?->name ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Utworzono</span><span>{{ $asset->created_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
                     <div class="list-row"><span class="muted">Aktualizacja</span><span>{{ $asset->updated_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
+                    </div>{{-- /asset-defs --}}
                     @if ($asset->notes)
-                        <div style="margin-top:10px">
+                        <div style="margin-top:14px">
                             <div class="muted" style="font-weight:600;margin-bottom:4px">Notatki</div>
                             <div>{!! nl2br(e($asset->notes)) !!}</div>
                         </div>
@@ -126,7 +130,9 @@
                 </div>
 
                 {{-- Historia jako kategoria. --}}
-                <div x-show="tab === 'history'" x-cloak class="stack" style="gap:10px;font-size:14px">
+                <div x-show="tab === 'history'" x-cloak style="font-size:14px">
+                    <h2 class="asset-content__title">Historia</h2>
+                    <div class="stack" style="gap:10px">
                     @forelse ($history as $entry)
                         <div class="list-row" style="align-items:flex-start">
                             <span>
@@ -147,6 +153,7 @@
                     @empty
                         <p class="muted" style="margin:0">Brak wpisów w historii.</p>
                     @endforelse
+                    </div>{{-- /stack --}}
                 </div>
             </div>
         </div>

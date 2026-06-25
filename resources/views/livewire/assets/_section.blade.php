@@ -1,33 +1,53 @@
 {{--
     Rekurencyjny węzeł prezentacji struktury zasobu.
     Oczekuje: $node (tablica: section, fields, group, children), $depth (int).
+
+    depth 0  = korzeń kategorii: pola bezpośrednie jako lista definicji,
+               a podsekcje / grupy jako wyraźne panele .asset-block.
+    depth>0  = podsekcja / grupa renderowana jako panel z nagłówkiem.
 --}}
 @php($section = $node['section'])
-@php($isRoot = $depth === 0)
 
-<div class="stack" style="gap:8px;{{ $depth > 0 ? 'margin-left:14px;border-left:2px solid var(--border,#eee);padding-left:12px' : '' }}">
-    @if ($depth > 0)
-        <div class="muted" style="font-weight:600;margin-top:4px">{{ $section->name }}</div>
-    @endif
+@if ($depth === 0)
+    <div class="asset-content">
+        @if ($node['group'])
+            @include('livewire.assets._group-view', ['view' => $node['group'], 'label' => $section->name, 'depth' => 0])
+        @elseif ($node['fields']->isNotEmpty())
+            <div class="asset-defs">
+                @foreach ($node['fields'] as $field)
+                    <div class="list-row"><span class="muted">{{ $field['label'] }}</span><span>{{ $field['value'] }}</span></div>
+                @endforeach
+            </div>
+        @endif
 
-    @if ($node['group'])
-        @include('livewire.assets._group-view', [
-            'view' => $node['group'],
-            'label' => $section->name,
-            'depth' => 0,
-        ])
-    @else
-        {{-- Sekcja / podsekcja: pola pojedyncze --}}
-        @forelse ($node['fields'] as $field)
-            <div class="list-row"><span class="muted">{{ $field['label'] }}</span><span>{{ $field['value'] }}</span></div>
-        @empty
-            @if ($node['children']->isEmpty())
-                <p class="muted" style="margin:0">Brak pól.</p>
+        @foreach ($node['children'] as $child)
+            @include('livewire.assets._section', ['node' => $child, 'depth' => 1])
+        @endforeach
+    </div>
+@else
+    <div class="asset-block">
+        <div class="asset-block__head">
+            <span class="asset-block__title">{{ $section->name }}</span>
+            @if ($node['group'])
+                <span class="asset-block__count">{{ $node['group']['rows']->count() }}</span>
             @endif
-        @endforelse
-    @endif
+        </div>
+        <div class="asset-block__body{{ ($node['group'] && ! $node['group']['hasChildren']) ? ' asset-block__body--flush' : '' }}">
+            @if ($node['group'])
+                @include('livewire.assets._group-view', ['view' => $node['group'], 'label' => $section->name, 'depth' => 0])
+            @else
+                @if ($node['fields']->isNotEmpty())
+                    <div class="asset-defs">
+                        @foreach ($node['fields'] as $field)
+                            <div class="list-row"><span class="muted">{{ $field['label'] }}</span><span>{{ $field['value'] }}</span></div>
+                        @endforeach
+                    </div>
+                @endif
 
-    @foreach ($node['children'] as $child)
-        @include('livewire.assets._section', ['node' => $child, 'depth' => $depth + 1])
-    @endforeach
-</div>
+                @foreach ($node['children'] as $child)
+                    @include('livewire.assets._section', ['node' => $child, 'depth' => $depth + 1])
+                @endforeach
+            @endif
+        </div>
+    </div>
+@endif

@@ -6,11 +6,11 @@
       $label — etykieta pojedynczego wpisu (np. nazwa grupy),
       $depth — int (głębokość wizualna).
 
-    Grupa-liść (bez zagnieżdżonych grup) → zwarta tabela.
+    Grupa-liść (bez zagnieżdżonych grup) → zwarta tabela (na całej szerokości panelu).
     Grupa z pod-grupami → każdy wpis jako blok: pola + rekurencyjne pod-grupy.
 --}}
 @if ($view['rows']->isEmpty())
-    <p class="muted" style="margin:0">Brak wpisów.</p>
+    <p class="muted" style="margin:0;padding:12px 14px">Brak wpisów.</p>
 @elseif (! $view['hasChildren'])
     <div class="table-wrap">
         <table class="table">
@@ -35,32 +35,36 @@
         </table>
     </div>
 @else
-    <div class="stack" style="gap:12px">
-        @foreach ($view['rows'] as $i => $row)
-            <div class="card" style="background:transparent">
-                <div class="card__body">
-                    <strong class="muted">{{ $label }} #{{ $i + 1 }}</strong>
+    @foreach ($view['rows'] as $i => $row)
+        <div class="asset-entry">
+            <div class="asset-entry__head">
+                <span class="asset-block__count">#{{ $i + 1 }}</span>
+                <span>{{ $label }}</span>
+            </div>
 
-                    @if ($view['columns']->isNotEmpty())
-                        <div style="margin-top:6px">
-                            @foreach ($view['columns'] as $col)
-                                <div class="list-row"><span class="muted">{{ $col->name }}</span><span>{{ $row['cells'][$col->id] ?? '—' }}</span></div>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    @foreach ($row['children'] as $child)
-                        <div style="margin-top:10px;margin-left:14px;border-left:2px solid var(--border,#eee);padding-left:12px">
-                            <div class="muted" style="font-weight:600;margin-bottom:6px">{{ $child['section']->name }}</div>
-                            @include('livewire.assets._group-view', [
-                                'view' => $child['view'],
-                                'label' => $child['label'],
-                                'depth' => $depth + 1,
-                            ])
-                        </div>
+            @if ($view['columns']->isNotEmpty())
+                <div class="asset-defs">
+                    @foreach ($view['columns'] as $col)
+                        <div class="list-row"><span class="muted">{{ $col->name }}</span><span>{{ $row['cells'][$col->id] ?? '—' }}</span></div>
                     @endforeach
                 </div>
-            </div>
-        @endforeach
-    </div>
+            @endif
+
+            @foreach ($row['children'] as $child)
+                <div class="asset-block" style="margin-top:12px">
+                    <div class="asset-block__head">
+                        <span class="asset-block__title">{{ $child['section']->name }}</span>
+                        <span class="asset-block__count">{{ $child['view']['rows']->count() }}</span>
+                    </div>
+                    <div class="asset-block__body{{ ! $child['view']['hasChildren'] ? ' asset-block__body--flush' : '' }}">
+                        @include('livewire.assets._group-view', [
+                            'view' => $child['view'],
+                            'label' => $child['label'],
+                            'depth' => $depth + 1,
+                        ])
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @endforeach
 @endif
