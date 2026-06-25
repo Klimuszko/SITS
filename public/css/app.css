@@ -562,6 +562,7 @@ html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180de
 
 /* Naglowek sekcji najwyzszego poziomu — pasek tytulu na delikatnym tle + lewy akcent. */
 .form-section > .card__head {
+    justify-content: flex-start;
     background: var(--surface-2);
     border-radius: var(--radius) var(--radius) 0 0;
 }
