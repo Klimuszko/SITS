@@ -20,37 +20,37 @@ class ListSortingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_clicking_header_sorts_and_toggles_direction(): void
+    public function test_clicking_default_column_toggles_direction(): void
     {
         $this->actingAs(User::factory()->admin()->create(['name' => 'Mmm Admin']));
 
         User::factory()->create(['name' => 'Aaa Pierwszy']);
         User::factory()->create(['name' => 'Zzz Ostatni']);
 
-        // Klik „name" → asc: Aaa przed Zzz.
+        // Kolumna domyślna „name" jest aktywna już po wejściu (asc), więc pierwszy
+        // klik w jej nagłówek PRZEŁĄCZA na desc (konwencja — jak w liście Zasobów).
         Livewire::test(UsersIndex::class)
-            ->call('sortBy', 'name')
-            ->assertSet('sortDir', 'asc')
-            ->assertSeeInOrder(['Aaa Pierwszy', 'Zzz Ostatni']);
-
-        // Drugi klik tej samej kolumny → desc: Zzz przed Aaa.
-        Livewire::test(UsersIndex::class)
-            ->call('sortBy', 'name')
+            ->assertSeeInOrder(['Aaa Pierwszy', 'Mmm Admin', 'Zzz Ostatni'])  // domyślnie name asc
             ->call('sortBy', 'name')
             ->assertSet('sortDir', 'desc')
-            ->assertSeeInOrder(['Zzz Ostatni', 'Aaa Pierwszy']);
+            ->assertSeeInOrder(['Zzz Ostatni', 'Mmm Admin', 'Aaa Pierwszy']);
     }
 
-    public function test_sort_by_other_column_resets_direction_to_asc(): void
+    public function test_non_default_column_starts_asc_then_toggles_and_switch_resets(): void
     {
         $this->actingAs(User::factory()->admin()->create());
 
         Livewire::test(UsersIndex::class)
-            ->call('sortBy', 'name')
-            ->call('sortBy', 'name')   // name → desc
-            ->assertSet('sortDir', 'desc')
-            ->call('sortBy', 'email')  // inna kolumna → wraca do asc
+            // „email" nie jest kolumną domyślną → pierwszy klik = asc.
+            ->call('sortBy', 'email')
             ->assertSet('sortCol', 'email')
+            ->assertSet('sortDir', 'asc')
+            // Drugi klik tej samej → desc.
+            ->call('sortBy', 'email')
+            ->assertSet('sortDir', 'desc')
+            // Przełączenie na inną kolumnę → kierunek wraca do asc.
+            ->call('sortBy', 'role')
+            ->assertSet('sortCol', 'role')
             ->assertSet('sortDir', 'asc');
     }
 
