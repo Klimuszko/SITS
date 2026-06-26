@@ -65,7 +65,8 @@ class Builder extends Component
 
     /**
      * Typy pól oferowane w builderze — TYLKO te, które renderuje/zwaliduje
-     * formularz zasobu (Step 14b). file/relation celowo wyłączone (Known Gaps).
+     * formularz zasobu (Step 14b). „relation" (Powiązany zasób) włączony w Step 19;
+     * „file" wciąż wyłączony (Known Gaps).
      *
      * @return array<int,string>
      */
@@ -81,6 +82,7 @@ class Builder extends Component
             AssetFieldType::Ip->value,
             AssetFieldType::Url->value,
             AssetFieldType::Email->value,
+            AssetFieldType::Relation->value,
         ];
     }
 

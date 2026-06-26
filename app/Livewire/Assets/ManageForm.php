@@ -163,6 +163,27 @@ class ManageForm extends Component
         return $this->singleFields()->filter(fn (AssetField $f) => $f->asset_section_id === null)->values();
     }
 
+    /**
+     * Kandydaci dla pól typu „Powiązany zasób": zasoby tej samej organizacji
+     * (bez bieżącego przy edycji), posortowani po nazwie. Klucz = marker
+     * `asset:{id}`, wartość = nazwa. Pusto, gdy organizacja nie jest wybrana.
+     *
+     * @return array<string,string>
+     */
+    protected function relationCandidates(): array
+    {
+        if (! $this->organization_id) {
+            return [];
+        }
+
+        return Asset::where('organization_id', $this->organization_id)
+            ->when($this->asset, fn ($q) => $q->whereKeyNot($this->asset->id))
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->mapWithKeys(fn (string $name, int $id) => ['asset:'.$id => $name])
+            ->all();
+    }
+
     /** Reset pól zależnych po zmianie organizacji. */
     public function updatedOrganizationId(): void
     {
@@ -468,10 +489,38 @@ class ManageForm extends Component
             AssetFieldType::Url => $rules[] = 'url',
             AssetFieldType::Email => $rules[] = 'email',
             AssetFieldType::Select => $rules[] = Rule::in($field->options ?? []),
+            AssetFieldType::Relation => $rules = array_merge($rules, ['string', $this->relationRule()]),
             default => $rules[] = 'string',
         };
 
         return $rules;
+    }
+
+    /**
+     * Reguła dla pól typu „Powiązany zasób". Wartość puste/tekst ręczny → OK.
+     * Wartość z markerem `asset:{id}` → `{id}` MUSI istnieć i należeć do tej
+     * samej organizacji co edytowany zasób; inaczej błąd (chroni przed
+     * sfałszowanym / cross-org referencją). Ta sama reguła dla pól pojedynczych
+     * i pól w grupach powtarzalnych.
+     */
+    protected function relationRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            if (! is_string($value) || ! str_starts_with($value, 'asset:')) {
+                return; // pusto / tekst ręczny — bez weryfikacji
+            }
+
+            $id = (int) substr($value, strlen('asset:'));
+
+            $exists = $id > 0 && $this->organization_id
+                && Asset::where('id', $id)
+                    ->where('organization_id', $this->organization_id)
+                    ->exists();
+
+            if (! $exists) {
+                $fail('Wybrany powiązany zasób jest nieprawidłowy.');
+            }
+        };
     }
 
     /** @return array<string,string> */
@@ -644,6 +693,7 @@ class ManageForm extends Component
             'tree' => $this->tree(),
             'looseFields' => $this->looseSingleFields(),
             'hasSkippedFields' => $this->hasSkippedFields(),
+            'relationCandidates' => $this->relationCandidates(),
         ]);
     }
 

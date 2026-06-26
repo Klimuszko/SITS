@@ -116,11 +116,7 @@ class Show extends Component
             }
 
             $fields = $node->activeFields->map(function (AssetField $field) use ($singleValues) {
-                return [
-                    'label' => $field->name,
-                    'value' => $this->castForDisplay($field, $singleValues->get($field->id)?->value),
-                    'type' => $field->type->value,
-                ];
+                return $this->fieldRow($field, $singleValues->get($field->id)?->value);
             })->values();
 
             return [
@@ -137,11 +133,7 @@ class Show extends Component
         $looseFields = $this->structure()->singleFields($category)
             ->filter(fn (AssetField $f) => $f->asset_section_id === null)
             ->map(function (AssetField $field) use ($singleValues) {
-                return [
-                    'label' => $field->name,
-                    'value' => $this->castForDisplay($field, $singleValues->get($field->id)?->value),
-                    'type' => $field->type->value,
-                ];
+                return $this->fieldRow($field, $singleValues->get($field->id)?->value);
             })->values();
 
         if ($looseFields->isNotEmpty()) {
@@ -214,8 +206,13 @@ class Show extends Component
             $valuesByField = $entry->values->keyBy('asset_field_id');
 
             $cells = [];
+            $cellHrefs = [];
             foreach ($columns as $field) {
-                $cells[$field->id] = $this->castForDisplay($field, $valuesByField->get($field->id)?->value);
+                $row = $this->fieldRow($field, $valuesByField->get($field->id)?->value);
+                $cells[$field->id] = $row['value'];
+                if (($row['href'] ?? null) !== null) {
+                    $cellHrefs[$field->id] = $row['href'];
+                }
             }
 
             $children = $childGroups->map(fn (AssetSection $child) => [
@@ -224,10 +221,74 @@ class Show extends Component
                 'view' => $this->buildGroupView($child, $entry->id, $level + 1, $index),
             ])->values();
 
-            return ['cells' => $cells, 'children' => $children];
+            return ['cells' => $cells, 'cellHrefs' => $cellHrefs, 'children' => $children];
         });
 
         return ['columns' => $columns, 'rows' => $rows, 'hasChildren' => $childGroups->isNotEmpty()];
+    }
+
+    /**
+     * Buduje tablicę wiersza pola do prezentacji: ['label','value','type','href'].
+     * 'href' ustawiane wyłącznie dla pól typu „Powiązany zasób" wskazujących na
+     * istniejący zasób tej samej organizacji (wewnętrzny link); inaczej brak href.
+     *
+     * @return array{label:string,value:string,type:string,href:?string}
+     */
+    protected function fieldRow(AssetField $field, ?string $raw): array
+    {
+        $href = null;
+
+        if ($field->type === AssetFieldType::Relation) {
+            $resolved = $this->resolveRelation($raw);
+            $value = $resolved['value'];
+            $href = $resolved['href'];
+        } else {
+            $value = $this->castForDisplay($field, $raw);
+        }
+
+        return [
+            'label' => $field->name,
+            'value' => $value,
+            'type' => $field->type->value,
+            'href' => $href,
+        ];
+    }
+
+    /**
+     * Rozwiązuje wartość pola relacji.
+     *  - marker `asset:{id}` + zasób istnieje + ta sama organizacja → nazwa + wewnętrzny href,
+     *  - marker `asset:{id}` nieistniejący / z innej organizacji → „—" bez href (BEZPIECZEŃSTWO:
+     *    nie linkujemy i nie ujawniamy obcego markera),
+     *  - tekst ręczny → tekst bez href,
+     *  - pusto → „—".
+     *
+     * @return array{value:string,href:?string}
+     */
+    protected function resolveRelation(?string $raw): array
+    {
+        if ($raw === null || $raw === '') {
+            return ['value' => '—', 'href' => null];
+        }
+
+        if (! str_starts_with($raw, 'asset:')) {
+            return ['value' => $raw, 'href' => null]; // tekst ręczny
+        }
+
+        $id = (int) substr($raw, strlen('asset:'));
+
+        $target = $id > 0
+            ? Asset::where('id', $id)
+                ->where('organization_id', $this->asset->organization_id)
+                ->first()
+            : null;
+
+        // Nieistniejący / z innej organizacji ALBO taki, którego oglądający nie ma prawa
+        // widzieć (np. prywatny) → „—" bez href. Nie ujawniamy nazwy ani linku.
+        if ($target === null || ! auth()->user()?->can('view', $target)) {
+            return ['value' => '—', 'href' => null];
+        }
+
+        return ['value' => $target->name, 'href' => route('assets.show', $target->id)];
     }
 
     /** Rzutuje surową wartość na czytelny tekst wg typu pola. */

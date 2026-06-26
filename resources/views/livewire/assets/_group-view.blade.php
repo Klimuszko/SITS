@@ -28,8 +28,11 @@
                         <td class="muted">#{{ $i + 1 }}</td>
                         @foreach ($view['columns'] as $col)
                             @php($v = $row['cells'][$col->id] ?? '—')
+                            @php($href = $row['cellHrefs'][$col->id] ?? null)
                             <td>
-                                @if ($col->type->value === 'url' && $v !== '—' && \Illuminate\Support\Str::startsWith($v, ['http://', 'https://']))
+                                @if ($href !== null)
+                                    <a href="{{ $href }}" wire:navigate>{{ $v }}</a>
+                                @elseif ($col->type->value === 'url' && $v !== '—' && \Illuminate\Support\Str::startsWith($v, ['http://', 'https://']))
                                     <a href="{{ $v }}" target="_blank" rel="noopener noreferrer">{{ $v }}</a>
                                 @else
                                     {{ $v }}
@@ -56,6 +59,7 @@
                             'label' => $col->name,
                             'value' => $row['cells'][$col->id] ?? '—',
                             'type' => $col->type->value,
+                            'href' => $row['cellHrefs'][$col->id] ?? null,
                         ]])
                     @endforeach
                 </div>

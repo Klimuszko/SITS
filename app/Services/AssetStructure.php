@@ -26,8 +26,8 @@ use Illuminate\Support\Collection;
  */
 class AssetStructure
 {
-    /** Typy pól nieobsługiwane w formularzu/widoku (v1). */
-    public const SKIPPED_TYPES = [AssetFieldType::File, AssetFieldType::Relation];
+    /** Typy pól nieobsługiwane w formularzu/widoku (v1). „relation" obsługiwany od Step 19. */
+    public const SKIPPED_TYPES = [AssetFieldType::File];
 
     /**
      * Maksymalna głębokość zagnieżdżenia grup powtarzalnych (grupa w grupie).

@@ -48,7 +48,7 @@ return [
         'url' => 'Adres URL',
         'email' => 'E-mail',
         'file' => 'Plik',
-        'relation' => 'Relacja',
+        'relation' => 'Powiązany zasób',
     ],
 
     'asset_relation_type' => [
