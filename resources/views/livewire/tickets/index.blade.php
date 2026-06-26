@@ -27,13 +27,13 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th scope="col">Numer</th>
-                    <th scope="col">Tytuł</th>
+                    <x-sort-th column="number" :current="$sortCol" :dir="$sortDir">Numer</x-sort-th>
+                    <x-sort-th column="title" :current="$sortCol" :dir="$sortDir">Tytuł</x-sort-th>
                     <th scope="col">Organizacja</th>
-                    <th scope="col">Status</th>
+                    <x-sort-th column="status" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
                     <th scope="col">Priorytet</th>
                     <th scope="col">Opiekun</th>
-                    <th scope="col">Ostatnia odpowiedź</th>
+                    <x-sort-th column="last_reply_at" :current="$sortCol" :dir="$sortDir">Ostatnia odpowiedź</x-sort-th>
                 </tr>
             </thead>
             <tbody>

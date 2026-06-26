@@ -327,6 +327,22 @@ html[data-sidebar="collapsed"] .sidebar__collapse-icon { transform: rotate(180de
 .table tbody tr:hover { background: var(--surface-2); }
 .table__empty { text-align: center; color: var(--text-muted); padding: 36px; }
 
+/* Sortowalny nagłówek: przycisk wtopiony w <th>, dziedziczy typografię nagłówka. */
+.th-sort {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: -11px -16px; padding: 11px 16px;
+    background: none; border: 0; cursor: pointer;
+    font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit;
+    transition: color .12s ease;
+}
+.th-sort--right { justify-content: flex-end; }
+.th-sort:hover { color: var(--text); }
+.th-sort--active { color: var(--text); }
+.th-sort:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; border-radius: var(--radius-sm); }
+.th-sort__ind { font-size: 11px; line-height: 1; opacity: .45; }
+.th-sort:hover .th-sort__ind,
+.th-sort--active .th-sort__ind { opacity: 1; color: var(--primary); }
+
 /* ------------------------------- Badges ------------------------------- */
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 1.5; }
 .badge--blue   { color: var(--c-blue);   background: var(--c-blue-bg); }

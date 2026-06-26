@@ -3,6 +3,7 @@
 namespace App\Livewire\Locations;
 
 use App\Enums\LocationType;
+use App\Livewire\Concerns\WithSorting;
 use App\Models\Location;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +18,7 @@ use Livewire\WithPagination;
 class Index extends Component
 {
     use WithPagination;
+    use WithSorting;
 
     #[Url(as: 'q')]
     public string $search = '';
@@ -70,7 +72,7 @@ class Index extends Component
             $query->where(fn (Builder $q) => $q->where('name', 'ilike', $term));
         }
 
-        $locations = $query->orderBy('name')->paginate(15);
+        $locations = $this->applySort($query)->paginate(15);
 
         return view('livewire.locations.index', [
             'locations' => $locations,
@@ -78,7 +80,19 @@ class Index extends Component
             'types' => LocationType::options(),
             'statuses' => __('enums.status'),
             'canCreate' => $user->can('create', Location::class),
+            'sortCol' => $this->effectiveSortCol(),
+            'sortDir' => $this->effectiveSortDir(),
         ]);
+    }
+
+    protected function sortableColumns(): array
+    {
+        return ['name', 'type', 'status'];
+    }
+
+    protected function defaultSort(): array
+    {
+        return ['name', 'asc'];
     }
 
     /** Organizacje dostępne w filtrze — pełna lista dla personelu, własne dla klienta. */

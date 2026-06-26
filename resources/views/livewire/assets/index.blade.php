@@ -34,11 +34,11 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th scope="col">Nazwa</th>
+                    <x-sort-th column="name" :current="$sortCol" :dir="$sortDir">Nazwa</x-sort-th>
                     <th scope="col">Organizacja</th>
                     <th scope="col">Kategoria</th>
                     <th scope="col">Lokalizacja</th>
-                    <th scope="col">Status</th>
+                    <x-sort-th column="status" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
                     <th scope="col">Rodzic</th>
                 </tr>
             </thead>

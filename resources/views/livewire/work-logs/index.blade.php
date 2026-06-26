@@ -27,12 +27,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th scope="col">Data</th>
-                    <th scope="col">Tytuł</th>
+                    <x-sort-th column="performed_at" :current="$sortCol" :dir="$sortDir">Data</x-sort-th>
+                    <x-sort-th column="title" :current="$sortCol" :dir="$sortDir">Tytuł</x-sort-th>
                     <th scope="col">Organizacja</th>
                     <th scope="col">Wykonawca</th>
-                    <th scope="col">Czas</th>
-                    <th scope="col">Status</th>
+                    <x-sort-th column="duration_minutes" :current="$sortCol" :dir="$sortDir">Czas</x-sort-th>
+                    <x-sort-th column="status" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
                     @if ($isStaff)
                         <th scope="col">Widoczność</th>
                     @endif

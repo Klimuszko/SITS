@@ -3,6 +3,7 @@
 namespace App\Livewire\Knowledge;
 
 use App\Enums\PublicationStatus;
+use App\Livewire\Concerns\WithSorting;
 use App\Models\KnowledgeArticle;
 use App\Models\KnowledgeCategory;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +18,7 @@ use Livewire\WithPagination;
 class Index extends Component
 {
     use WithPagination;
+    use WithSorting;
 
     #[Url(as: 'q')]
     public string $search = '';
@@ -109,7 +111,7 @@ class Index extends Component
             $query->whereRaw('LOWER(title) LIKE ?', [$term]);
         }
 
-        $articles = $query->latest('published_at')->latest()->paginate(15);
+        $articles = $this->applySort($query)->paginate(15);
 
         return view('livewire.knowledge.index', [
             'articles' => $articles,
@@ -117,6 +119,18 @@ class Index extends Component
             'statuses' => PublicationStatus::options(),
             'canCreate' => $user->can('create', KnowledgeArticle::class),
             'isStaff' => $user->isStaff(),
+            'sortCol' => $this->effectiveSortCol(),
+            'sortDir' => $this->effectiveSortDir(),
         ]);
+    }
+
+    protected function sortableColumns(): array
+    {
+        return ['title', 'status', 'published_at'];
+    }
+
+    protected function defaultSort(): array
+    {
+        return ['published_at', 'desc'];
     }
 }

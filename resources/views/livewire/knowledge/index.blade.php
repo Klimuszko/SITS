@@ -30,11 +30,11 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th scope="col">Tytuł</th>
+                    <x-sort-th column="title" :current="$sortCol" :dir="$sortDir">Tytuł</x-sort-th>
                     <th scope="col">Kategoria</th>
-                    <th scope="col">Status</th>
+                    <x-sort-th column="status" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
                     <th scope="col">Autor</th>
-                    <th scope="col">Opublikowano</th>
+                    <x-sort-th column="published_at" :current="$sortCol" :dir="$sortDir">Opublikowano</x-sort-th>
                 </tr>
             </thead>
             <tbody>

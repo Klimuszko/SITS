@@ -32,12 +32,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th scope="col">Nazwa</th>
-                    <th scope="col">E-mail</th>
-                    <th scope="col">Rola</th>
+                    <x-sort-th column="name" :current="$sortCol" :dir="$sortDir">Nazwa</x-sort-th>
+                    <x-sort-th column="email" :current="$sortCol" :dir="$sortDir">E-mail</x-sort-th>
+                    <x-sort-th column="role" :current="$sortCol" :dir="$sortDir">Rola</x-sort-th>
                     <th scope="col">Logowanie</th>
                     <th scope="col">Organizacje</th>
-                    <th scope="col">Status</th>
+                    <x-sort-th column="is_active" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
                     <th scope="col"></th>
                 </tr>
             </thead>

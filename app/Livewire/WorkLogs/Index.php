@@ -4,6 +4,7 @@ namespace App\Livewire\WorkLogs;
 
 use App\Enums\OrgRole;
 use App\Enums\PublicationStatus;
+use App\Livewire\Concerns\WithSorting;
 use App\Models\AdministrativeWorkLog;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,6 +19,7 @@ use Livewire\WithPagination;
 class Index extends Component
 {
     use WithPagination;
+    use WithSorting;
 
     #[Url(as: 'q')]
     public string $search = '';
@@ -144,13 +146,25 @@ class Index extends Component
             $query->where('title', 'ilike', '%'.$this->search.'%');
         }
 
-        $logs = $query->latest('performed_at')->latest('id')->paginate(15);
+        $logs = $this->applySort($query)->paginate(15);
 
         return view('livewire.work-logs.index', [
             'logs' => $logs,
             'organizations' => $this->availableOrganizations(),
             'isStaff' => $user->isStaff(),
             'canCreate' => $user->can('create', AdministrativeWorkLog::class),
+            'sortCol' => $this->effectiveSortCol(),
+            'sortDir' => $this->effectiveSortDir(),
         ]);
+    }
+
+    protected function sortableColumns(): array
+    {
+        return ['performed_at', 'title', 'duration_minutes', 'status'];
+    }
+
+    protected function defaultSort(): array
+    {
+        return ['performed_at', 'desc'];
     }
 }

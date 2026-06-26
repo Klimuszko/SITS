@@ -4,6 +4,7 @@ namespace App\Livewire\Users;
 
 use App\Enums\AuditAction;
 use App\Enums\Role;
+use App\Livewire\Concerns\WithSorting;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Livewire\Attributes\Layout;
@@ -17,6 +18,7 @@ use Livewire\WithPagination;
 class Index extends Component
 {
     use WithPagination;
+    use WithSorting;
 
     #[Url(as: 'q')]
     public string $search = '';
@@ -86,11 +88,23 @@ class Index extends Component
             $query->where('is_active', $this->active === '1');
         }
 
-        $users = $query->orderBy('name')->paginate(15);
+        $users = $this->applySort($query)->paginate(15);
 
         return view('livewire.users.index', [
             'users' => $users,
             'roles' => Role::options(),
+            'sortCol' => $this->effectiveSortCol(),
+            'sortDir' => $this->effectiveSortDir(),
         ]);
+    }
+
+    protected function sortableColumns(): array
+    {
+        return ['name', 'email', 'role', 'is_active'];
+    }
+
+    protected function defaultSort(): array
+    {
+        return ['name', 'asc'];
     }
 }

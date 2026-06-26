@@ -4,6 +4,7 @@ namespace App\Livewire\Tickets;
 
 use App\Enums\OrgRole;
 use App\Enums\TicketStatus;
+use App\Livewire\Concerns\WithSorting;
 use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Layout;
@@ -17,6 +18,7 @@ use Livewire\WithPagination;
 class Index extends Component
 {
     use WithPagination;
+    use WithSorting;
 
     #[Url(as: 'q')]
     public string $search = '';
@@ -87,12 +89,24 @@ class Index extends Component
                 ->orWhere('title', 'ilike', $term));
         }
 
-        $tickets = $query->latest('last_reply_at')->latest()->paginate(15);
+        $tickets = $this->applySort($query)->paginate(15);
 
         return view('livewire.tickets.index', [
             'tickets' => $tickets,
             'statuses' => TicketStatus::options(),
             'canCreate' => $user->can('create', Ticket::class),
+            'sortCol' => $this->effectiveSortCol(),
+            'sortDir' => $this->effectiveSortDir(),
         ]);
+    }
+
+    protected function sortableColumns(): array
+    {
+        return ['number', 'title', 'status', 'last_reply_at'];
+    }
+
+    protected function defaultSort(): array
+    {
+        return ['last_reply_at', 'desc'];
     }
 }

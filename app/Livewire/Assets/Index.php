@@ -6,6 +6,7 @@ use App\Enums\AssetStatus;
 use App\Enums\OrgRole;
 use App\Models\Asset;
 use App\Models\AssetCategory;
+use App\Livewire\Concerns\WithSorting;
 use App\Models\Location;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +21,7 @@ use Livewire\WithPagination;
 class Index extends Component
 {
     use WithPagination;
+    use WithSorting;
 
     #[Url(as: 'q')]
     public string $search = '';
@@ -121,7 +123,7 @@ class Index extends Component
                 ->orWhere('inventory_code', 'ilike', $term));
         }
 
-        $assets = $query->orderBy('name')->paginate(15);
+        $assets = $this->applySort($query)->paginate(15);
 
         // Pełne ścieżki lokalizacji dla zasobów z bieżącej strony — jednym zapytaniem
         // (mapa id → ścieżka), bez N+1 przy chodzeniu po rodzicach w pętli widoku.
@@ -134,7 +136,19 @@ class Index extends Component
             'categories' => AssetCategory::active()->orderBy('name')->get(),
             'statuses' => AssetStatus::options(),
             'canCreate' => $user->can('create', Asset::class),
+            'sortCol' => $this->effectiveSortCol(),
+            'sortDir' => $this->effectiveSortDir(),
         ]);
+    }
+
+    protected function sortableColumns(): array
+    {
+        return ['name', 'status'];
+    }
+
+    protected function defaultSort(): array
+    {
+        return ['name', 'asc'];
     }
 
     /** Organizacje dostępne w filtrze — pełna lista dla personelu, własne dla klienta. */
