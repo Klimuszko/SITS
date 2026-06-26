@@ -152,14 +152,21 @@ class AssetFieldBuilderTest extends TestCase
         ]);
     }
 
-    public function test_relation_type_is_rejected(): void
+    public function test_relation_type_is_accepted(): void
     {
+        // Step 19: „Powiązany zasób" (relation) jest już obsługiwany w formularzu/widoku.
         Livewire::test(Builder::class, ['assetCategory' => $this->category])
             ->set('fieldName', 'Powiązanie')
             ->set('fieldKey', 'powiazanie')
             ->set('fieldType', AssetFieldType::Relation->value)
             ->call('saveField')
-            ->assertHasErrors(['fieldType']);
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('asset_fields', [
+            'asset_category_id' => $this->category->id,
+            'key' => 'powiazanie',
+            'type' => AssetFieldType::Relation->value,
+        ]);
     }
 
     /**
