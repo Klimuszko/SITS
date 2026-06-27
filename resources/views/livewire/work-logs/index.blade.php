@@ -29,8 +29,8 @@
                 <tr>
                     <x-sort-th column="performed_at" :current="$sortCol" :dir="$sortDir">Data</x-sort-th>
                     <x-sort-th column="title" :current="$sortCol" :dir="$sortDir">Tytuł</x-sort-th>
-                    <th scope="col">Organizacja</th>
-                    <th scope="col">Wykonawca</th>
+                    <x-sort-th column="organization" :current="$sortCol" :dir="$sortDir">Organizacja</x-sort-th>
+                    <x-sort-th column="performer" :current="$sortCol" :dir="$sortDir">Wykonawca</x-sort-th>
                     <x-sort-th column="duration_minutes" :current="$sortCol" :dir="$sortDir">Czas</x-sort-th>
                     <x-sort-th column="status" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
                     @if ($isStaff)

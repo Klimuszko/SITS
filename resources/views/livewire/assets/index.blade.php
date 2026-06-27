@@ -35,11 +35,11 @@
             <thead>
                 <tr>
                     <x-sort-th column="name" :current="$sortCol" :dir="$sortDir">Nazwa</x-sort-th>
-                    <th scope="col">Organizacja</th>
-                    <th scope="col">Kategoria</th>
-                    <th scope="col">Lokalizacja</th>
+                    <x-sort-th column="organization" :current="$sortCol" :dir="$sortDir">Organizacja</x-sort-th>
+                    <x-sort-th column="category" :current="$sortCol" :dir="$sortDir">Kategoria</x-sort-th>
+                    <x-sort-th column="location" :current="$sortCol" :dir="$sortDir">Lokalizacja</x-sort-th>
                     <x-sort-th column="status" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
-                    <th scope="col">Rodzic</th>
+                    <x-sort-th column="parent" :current="$sortCol" :dir="$sortDir">Rodzic</x-sort-th>
                 </tr>
             </thead>
             <tbody>

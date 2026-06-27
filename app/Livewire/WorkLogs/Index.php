@@ -7,6 +7,7 @@ use App\Enums\PublicationStatus;
 use App\Livewire\Concerns\WithSorting;
 use App\Models\AdministrativeWorkLog;
 use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -160,11 +161,27 @@ class Index extends Component
 
     protected function sortableColumns(): array
     {
-        return ['performed_at', 'title', 'duration_minutes', 'status'];
+        return ['performed_at', 'title', 'duration_minutes', 'status', 'organization', 'performer'];
     }
 
     protected function defaultSort(): array
     {
         return ['performed_at', 'desc'];
+    }
+
+    /**
+     * Kolumny relacyjne sortowane korelowanym podzapytaniem (bez JOIN).
+     * Wszystkie ramiona hardcodowane; $key zawsze z białej listy.
+     * „Widoczność" pozostaje niesortowalna (wyliczana z dwóch flag — patrz Known Gap).
+     */
+    protected function sortExpression(string $key): mixed
+    {
+        return match ($key) {
+            'organization' => Organization::select('name')
+                ->whereColumn('organizations.id', 'administrative_work_logs.organization_id'),
+            'performer' => User::select('name')
+                ->whereColumn('users.id', 'administrative_work_logs.performed_by'),
+            default => $key,
+        };
     }
 }

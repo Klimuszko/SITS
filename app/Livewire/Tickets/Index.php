@@ -5,7 +5,10 @@ namespace App\Livewire\Tickets;
 use App\Enums\OrgRole;
 use App\Enums\TicketStatus;
 use App\Livewire\Concerns\WithSorting;
+use App\Models\Organization;
 use App\Models\Ticket;
+use App\Models\TicketPriority;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -102,11 +105,29 @@ class Index extends Component
 
     protected function sortableColumns(): array
     {
-        return ['number', 'title', 'status', 'last_reply_at'];
+        return ['number', 'title', 'status', 'last_reply_at', 'organization', 'priority', 'assignee'];
     }
 
     protected function defaultSort(): array
     {
         return ['last_reply_at', 'desc'];
+    }
+
+    /**
+     * Kolumny relacyjne sortowane korelowanym podzapytaniem (bez JOIN). Priorytet sortuje
+     * po kolumnie porządkującej `level` (1=niski … 4=krytyczny), NIE alfabetycznie po nazwie.
+     * Wszystkie ramiona hardcodowane; $key zawsze z białej listy.
+     */
+    protected function sortExpression(string $key): mixed
+    {
+        return match ($key) {
+            'organization' => Organization::select('name')
+                ->whereColumn('organizations.id', 'tickets.organization_id'),
+            'priority' => TicketPriority::select('level')
+                ->whereColumn('ticket_priorities.id', 'tickets.ticket_priority_id'),
+            'assignee' => User::select('name')
+                ->whereColumn('users.id', 'tickets.assigned_support_id'),
+            default => $key,
+        };
     }
 }

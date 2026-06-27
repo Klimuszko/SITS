@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Livewire\Assets\Index as AssetsIndex;
+use App\Livewire\Locations\Index as LocationsIndex;
 use App\Livewire\Users\Index as UsersIndex;
 use App\Models\Asset;
 use App\Models\AssetCategory;
+use App\Models\Location;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -98,5 +100,80 @@ class ListSortingTest extends TestCase
             ->call('sortBy', 'name')
             ->assertSet('sortDir', 'desc')
             ->assertSeeInOrder(['Zzz Zasob', 'Aaa Zasob']);
+    }
+
+    // ── Step 21: sortowanie po kolumnach relacyjnych / licznikach ──────────────
+
+    public function test_assets_sort_by_organization_relation_orders_by_org_name(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        $category = AssetCategory::factory()->create();
+
+        // Nazwy zasobów celowo PRZECIWNE do nazw organizacji, żeby sortowanie po
+        // organizacji (podzapytanie) dało inną kolejność niż sortowanie po nazwie zasobu.
+        $orgA = Organization::factory()->create(['name' => 'Aaa Organizacja']);
+        $orgZ = Organization::factory()->create(['name' => 'Zzz Organizacja']);
+
+        Asset::factory()->forOrganization($orgZ)->forCategory($category)->create(['name' => 'Pierwszy zasob']);
+        Asset::factory()->forOrganization($orgA)->forCategory($category)->create(['name' => 'Drugi zasob']);
+
+        // „organization" to kolumna NIE-domyślna → pierwszy klik = asc (wg nazwy organizacji).
+        Livewire::test(AssetsIndex::class)
+            ->call('sortBy', 'organization')
+            ->assertSet('sortCol', 'organization')
+            ->assertSet('sortDir', 'asc')
+            // Aaa Organizacja (Drugi zasob) przed Zzz Organizacja (Pierwszy zasob).
+            ->assertSeeInOrder(['Drugi zasob', 'Pierwszy zasob'])
+            // Drugi klik → desc → odwrotna kolejność po nazwie organizacji.
+            ->call('sortBy', 'organization')
+            ->assertSet('sortDir', 'desc')
+            ->assertSeeInOrder(['Pierwszy zasob', 'Drugi zasob']);
+    }
+
+    public function test_locations_sort_by_assets_count_subquery_orders_by_count_without_duplicates(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        $org = Organization::factory()->create();
+        $category = AssetCategory::factory()->create();
+
+        // „Magazyn" ma 2 zasoby, „Serwerownia" ma 0 — sortowanie po liczniku „assets".
+        $busy = Location::factory()->forOrganization($org)->create(['name' => 'Magazyn']);
+        Location::factory()->forOrganization($org)->create(['name' => 'Serwerownia']);
+
+        Asset::factory()->forOrganization($org)->forCategory($category)->create([
+            'name' => 'Zasob jeden', 'location_id' => $busy->id,
+        ]);
+        Asset::factory()->forOrganization($org)->forCategory($category)->create([
+            'name' => 'Zasob dwa', 'location_id' => $busy->id,
+        ]);
+
+        // „assets" to kolumna NIE-domyślna → pierwszy klik = asc (0 przed 2).
+        Livewire::test(LocationsIndex::class)
+            ->call('sortBy', 'assets')
+            ->assertSet('sortCol', 'assets')
+            ->assertSet('sortDir', 'asc')
+            ->assertSeeInOrder(['Serwerownia', 'Magazyn'])
+            // Drugi klik → desc (2 przed 0).
+            ->call('sortBy', 'assets')
+            ->assertSet('sortDir', 'desc')
+            ->assertSeeInOrder(['Magazyn', 'Serwerownia'])
+            // Korelowane podzapytanie (nie JOIN) → brak duplikacji wierszy: każda lokalizacja
+            // pojawia się dokładnie raz mimo 2 zasobów w „Magazyn".
+            ->assertSeeTextInOrder(['Magazyn', 'Serwerownia']);
+    }
+
+    public function test_relation_key_outside_whitelist_is_ignored(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        // Klucz relacyjny spoza białej listy (np. nieistniejąca relacja) — sortCol/sortDir
+        // bez zmian, sortExpression() nigdy nie dostaje tego klucza, render bez błędu.
+        Livewire::test(AssetsIndex::class)
+            ->call('sortBy', 'manufacturer')
+            ->assertSet('sortCol', '')
+            ->assertSet('sortDir', 'asc')
+            ->assertOk();
     }
 }

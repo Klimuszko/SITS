@@ -6,6 +6,7 @@ use App\Enums\PublicationStatus;
 use App\Livewire\Concerns\WithSorting;
 use App\Models\KnowledgeArticle;
 use App\Models\KnowledgeCategory;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -126,11 +127,26 @@ class Index extends Component
 
     protected function sortableColumns(): array
     {
-        return ['title', 'status', 'published_at'];
+        return ['title', 'status', 'published_at', 'category', 'author'];
     }
 
     protected function defaultSort(): array
     {
         return ['published_at', 'desc'];
+    }
+
+    /**
+     * Kolumny relacyjne sortowane korelowanym podzapytaniem (bez JOIN).
+     * Wszystkie ramiona hardcodowane; $key zawsze z białej listy.
+     */
+    protected function sortExpression(string $key): mixed
+    {
+        return match ($key) {
+            'category' => KnowledgeCategory::select('name')
+                ->whereColumn('knowledge_categories.id', 'knowledge_articles.knowledge_category_id'),
+            'author' => User::select('name')
+                ->whereColumn('users.id', 'knowledge_articles.author_id'),
+            default => $key,
+        };
     }
 }

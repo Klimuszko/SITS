@@ -4,6 +4,7 @@ namespace App\Livewire\Locations;
 
 use App\Enums\LocationType;
 use App\Livewire\Concerns\WithSorting;
+use App\Models\Asset;
 use App\Models\Location;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Builder;
@@ -87,12 +88,32 @@ class Index extends Component
 
     protected function sortableColumns(): array
     {
-        return ['name', 'type', 'status'];
+        return ['name', 'type', 'status', 'organization', 'parent', 'children', 'assets'];
     }
 
     protected function defaultSort(): array
     {
         return ['name', 'asc'];
+    }
+
+    /**
+     * Kolumny relacyjne i liczniki sortowane korelowanym podzapytaniem (bez JOIN).
+     * Liczniki przez selectRaw('count(*)'); rodzic to self-relacja z aliasem tabeli.
+     * Wszystkie ramiona hardcodowane; $key zawsze z białej listy.
+     */
+    protected function sortExpression(string $key): mixed
+    {
+        return match ($key) {
+            'organization' => Organization::select('name')
+                ->whereColumn('organizations.id', 'locations.organization_id'),
+            'parent' => Location::query()->from('locations as parent_location')->select('parent_location.name')
+                ->whereColumn('parent_location.id', 'locations.parent_id'),
+            'children' => Location::query()->from('locations as child_location')->selectRaw('count(*)')
+                ->whereColumn('child_location.parent_id', 'locations.id'),
+            'assets' => Asset::query()->selectRaw('count(*)')
+                ->whereColumn('assets.location_id', 'locations.id'),
+            default => $key,
+        };
     }
 
     /** Organizacje dostępne w filtrze — pełna lista dla personelu, własne dla klienta. */

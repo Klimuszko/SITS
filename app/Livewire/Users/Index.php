@@ -100,11 +100,24 @@ class Index extends Component
 
     protected function sortableColumns(): array
     {
-        return ['name', 'email', 'role', 'is_active'];
+        return ['name', 'email', 'role', 'is_active', 'login'];
     }
 
     protected function defaultSort(): array
     {
         return ['name', 'asc'];
+    }
+
+    /**
+     * „Logowanie" sortuje po bezpośredniej kolumnie `oauth_provider`
+     * (null=hasło / microsoft / google). Ramię hardcodowane; $key zawsze z białej listy.
+     * Kolumna „Organizacje" (relacja wiele-do-wielu) pozostaje niesortowalna (Known Gap).
+     */
+    protected function sortExpression(string $key): mixed
+    {
+        return match ($key) {
+            'login' => 'oauth_provider',
+            default => $key,
+        };
     }
 }

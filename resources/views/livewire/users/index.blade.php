@@ -35,7 +35,7 @@
                     <x-sort-th column="name" :current="$sortCol" :dir="$sortDir">Nazwa</x-sort-th>
                     <x-sort-th column="email" :current="$sortCol" :dir="$sortDir">E-mail</x-sort-th>
                     <x-sort-th column="role" :current="$sortCol" :dir="$sortDir">Rola</x-sort-th>
-                    <th scope="col">Logowanie</th>
+                    <x-sort-th column="login" :current="$sortCol" :dir="$sortDir">Logowanie</x-sort-th>
                     <th scope="col">Organizacje</th>
                     <x-sort-th column="is_active" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
                     <th scope="col"></th>

@@ -31,9 +31,9 @@
             <thead>
                 <tr>
                     <x-sort-th column="title" :current="$sortCol" :dir="$sortDir">Tytuł</x-sort-th>
-                    <th scope="col">Kategoria</th>
+                    <x-sort-th column="category" :current="$sortCol" :dir="$sortDir">Kategoria</x-sort-th>
                     <x-sort-th column="status" :current="$sortCol" :dir="$sortDir">Status</x-sort-th>
-                    <th scope="col">Autor</th>
+                    <x-sort-th column="author" :current="$sortCol" :dir="$sortDir">Autor</x-sort-th>
                     <x-sort-th column="published_at" :current="$sortCol" :dir="$sortDir">Opublikowano</x-sort-th>
                 </tr>
             </thead>

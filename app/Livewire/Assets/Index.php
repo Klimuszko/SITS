@@ -143,12 +143,31 @@ class Index extends Component
 
     protected function sortableColumns(): array
     {
-        return ['name', 'status'];
+        return ['name', 'status', 'organization', 'category', 'location', 'parent'];
     }
 
     protected function defaultSort(): array
     {
         return ['name', 'asc'];
+    }
+
+    /**
+     * Kolumny relacyjne sortowane korelowanym podzapytaniem (bez JOIN — brak duplikacji
+     * wierszy). Wszystkie ramiona hardcodowane; $key zawsze z białej listy.
+     */
+    protected function sortExpression(string $key): mixed
+    {
+        return match ($key) {
+            'organization' => Organization::select('name')
+                ->whereColumn('organizations.id', 'assets.organization_id'),
+            'category' => AssetCategory::select('name')
+                ->whereColumn('asset_categories.id', 'assets.asset_category_id'),
+            'location' => Location::select('name')
+                ->whereColumn('locations.id', 'assets.location_id'),
+            'parent' => Asset::query()->from('assets as parent_asset')->select('parent_asset.name')
+                ->whereColumn('parent_asset.id', 'assets.parent_asset_id'),
+            default => $key,
+        };
     }
 
     /** Organizacje dostępne w filtrze — pełna lista dla personelu, własne dla klienta. */

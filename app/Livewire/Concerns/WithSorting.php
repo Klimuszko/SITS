@@ -12,8 +12,14 @@ use Livewire\Attributes\Url;
  * Nigdy nie trafiają wprost do orderBy — applySort() sortuje WYŁĄCZNIE po kolumnie
  * z białej listy sortableColumns(), a kierunek jest klampowany do {asc,desc}.
  *
- * Komponent korzystający musi zaimplementować sortableColumns() (tylko BEZPOŚREDNIE
- * kolumny tabeli — bez relacji/JOIN-ów) oraz defaultSort() (= bieżący domyślny orderBy).
+ * Komponent korzystający musi zaimplementować sortableColumns() (biała lista kluczy —
+ * kolumny tabeli ORAZ klucze relacyjne/liczniki) oraz defaultSort() (= bieżący domyślny orderBy).
+ *
+ * Kolumny relacyjne/liczniki: komponent NADPISUJE sortExpression() z hardcodowanym
+ * match($key) mapującym klucz na BEZPIECZNE korelowane podzapytanie (bez JOIN — nie
+ * duplikuje wierszy, zgodne z paginate()/with(); działa na sqlite i pgsql). Klucz wchodzi
+ * do match() tylko po przejściu białej listy (effectiveSortCol()), więc do SQL nigdy nie
+ * trafia surowy input użytkownika.
  */
 trait WithSorting
 {
@@ -61,13 +67,25 @@ trait WithSorting
         return $this->sortDir === 'desc' ? 'desc' : 'asc';
     }
 
+    /**
+     * Wyrażenie sortowania dla danego klucza. Domyślnie kolumna bezpośrednia (= klucz).
+     * Komponent nadpisuje to dla kluczy relacyjnych/liczników, zwracając hardcodowane
+     * korelowane podzapytanie. $key jest ZAWSZE z białej listy (effectiveSortCol()).
+     *
+     * @return mixed Kolumna (string) lub korelowane podzapytanie (Builder/Expression).
+     */
+    protected function sortExpression(string $key): mixed
+    {
+        return $key;
+    }
+
     /** Dokłada bezpieczny orderBy do zapytania (tylko whitelista + asc|desc). */
     protected function applySort(Builder $q): Builder
     {
-        return $q->orderBy($this->effectiveSortCol(), $this->effectiveSortDir());
+        return $q->orderBy($this->sortExpression($this->effectiveSortCol()), $this->effectiveSortDir());
     }
 
-    /** Biała lista sortowalnych kolumn — TYLKO bezpośrednie kolumny tabeli. */
+    /** Biała lista sortowalnych kluczy — kolumny tabeli oraz klucze relacyjne/liczniki. */
     abstract protected function sortableColumns(): array;
 
     /** Domyślne sortowanie [kolumna, kierunek], np. ['name', 'asc']. */
