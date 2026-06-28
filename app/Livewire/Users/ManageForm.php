@@ -179,6 +179,9 @@ class ManageForm extends Component
                 $target->password = $data['password'];
             } elseif ($isNew) {
                 $target->password = Str::password(40);
+                // Nowe konto bez hasła = zaproszenie e-mail → oznacz jak w masowym Invite,
+                // żeby figurowało na liście „Oczekujące zaproszenia" (czyszczone przy aktywacji).
+                $target->invited_at = now();
             }
 
             if ($isNew) {

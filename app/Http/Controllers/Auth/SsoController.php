@@ -69,6 +69,7 @@ class SsoController extends Controller
         $user->forceFill([
             'oauth_provider' => $provider,
             'oauth_id' => (string) $oauthUser->getId(),
+            'invited_at' => null, // zaproszony zalogował się przez SSO = konto aktywne
         ])->save();
 
         Auth::login($user, remember: true);

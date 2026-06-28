@@ -17,6 +17,7 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 /**
  * Masowe zapraszanie użytkowników (faza 4–5 onboardingu). Admin wkleja wiele
@@ -28,7 +29,13 @@ use Livewire\Component;
 #[Title('Zaproś użytkowników')]
 class Invite extends Component
 {
+    use WithPagination;
+
     public string $emails = '';
+
+    /** Świeży link „ustaw hasło" wygenerowany na żądanie (Kopiuj link) — pokazywany inline. */
+    public ?string $copiedLink = null;
+    public ?int $copiedFor = null;
 
     // Opcjonalne przypisanie do organizacji przy zaproszeniu.
     public ?int $organization_id = null;
@@ -103,6 +110,8 @@ class Invite extends Component
             $user->email_verified_at = now();
             // Placeholder hasła — nieużywalny; prawdziwe ustawi użytkownik z linku.
             $user->password = Str::password(40);
+            // Stan „oczekujące zaproszenie" — czyszczony przy aktywacji (hasło/SSO).
+            $user->invited_at = now();
             $user->save();
 
             AuditLogger::log(AuditAction::UserCreated, $user, null, [
@@ -145,6 +154,82 @@ class Invite extends Component
     }
 
     /**
+     * Pobiera konto z OCZEKUJĄCYM zaproszeniem (`invited_at IS NOT NULL`) lub 404.
+     * Twardy guard: żadna akcja zarządzania zaproszeniami nie może dotknąć zwykłego,
+     * aktywowanego konta — tylko oczekujące zaproszenia (z `invited_at`).
+     */
+    protected function pendingInviteOrFail(int $id): User
+    {
+        return User::whereNotNull('invited_at')->findOrFail($id);
+    }
+
+    /**
+     * Usuń oczekujące zaproszenie — twarde usunięcie konta (User ma SoftDeletes →
+     * forceDelete), zwalnia e-mail do ponownego zaproszenia. Tylko dla oczekujących.
+     */
+    public function deleteInvitation(int $id): void
+    {
+        $user = $this->pendingInviteOrFail($id);
+
+        // Policy 'delete' wymaga instancji (blokuje też Super Admina / własne konto).
+        $this->authorize('delete', $user);
+
+        AuditLogger::log(AuditAction::UserDeleted, $user, [
+            'email' => $user->email,
+            'role' => $user->role->value,
+            'invitation' => true,
+        ], null);
+
+        $user->forceDelete();
+
+        if ($this->copiedFor === $id) {
+            $this->copiedLink = null;
+            $this->copiedFor = null;
+        }
+
+        session()->flash('status', 'Zaproszenie zostało usunięte. E-mail jest znów wolny.');
+    }
+
+    /**
+     * Wyślij zaproszenie ponownie — świeży token brokera „invitations”, ponowna
+     * notyfikacja i odświeżenie znacznika `invited_at`. Tylko dla oczekujących.
+     */
+    public function resendInvitation(int $id): void
+    {
+        $this->authorize('create', User::class);
+
+        $user = $this->pendingInviteOrFail($id);
+
+        $token = Password::broker('invitations')->createToken($user);
+        $user->notify(new AccountInvitationNotification($token));
+
+        $user->forceFill(['invited_at' => now()])->save();
+
+        session()->flash('status', 'Zaproszenie wysłano ponownie.');
+    }
+
+    /**
+     * Wygeneruj ŚWIEŻY link „ustaw hasło” do ręcznego skopiowania (gdy mail leży).
+     * URL budowany identycznie jak w AccountInvitationNotification (trasa
+     * `password.set` + token + email), świeży token za każdym razem — NIGDY nie
+     * ujawniamy zahashowanego tokenu z DB. Tylko admin, tylko dla oczekujących.
+     */
+    public function copyInviteLink(int $id): void
+    {
+        $this->authorize('create', User::class);
+
+        $user = $this->pendingInviteOrFail($id);
+
+        $token = Password::broker('invitations')->createToken($user);
+
+        $this->copiedLink = route('password.set', [
+            'token' => $token,
+            'email' => $user->getEmailForPasswordReset(),
+        ]);
+        $this->copiedFor = $id;
+    }
+
+    /**
      * Rozbija wklejony tekst na adresy (po przecinku/średniku/białych znakach),
      * normalizuje do lowercase, deduplikuje, oddziela niepoprawne.
      *
@@ -184,6 +269,11 @@ class Invite extends Component
 
     public function render()
     {
+        $pending = User::whereNotNull('invited_at')
+            ->with('memberships.organization')
+            ->orderByDesc('invited_at')
+            ->paginate(15);
+
         return view('livewire.users.invite', [
             'organizations' => Organization::orderBy('name')->get(),
             'orgRoles' => OrgRole::options(),
@@ -191,6 +281,8 @@ class Invite extends Component
             'clientProfiles' => AccessProfile::where('applies_to', AccessProfile::APPLIES_CLIENT)
                 ->where('is_active', true)
                 ->orderBy('name')->get(),
+            'pending' => $pending,
+            'inviteExpiryDays' => 7,
         ]);
     }
 }

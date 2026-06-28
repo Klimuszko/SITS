@@ -50,6 +50,7 @@ class SetPassword extends Component
                 $user->forceFill([
                     'password' => $password,
                     'remember_token' => Str::random(60),
+                    'invited_at' => null, // konto aktywowane — zaproszenie nie jest już oczekujące
                 ])->save();
 
                 event(new PasswordReset($user));

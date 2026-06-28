@@ -27,6 +27,7 @@ class User extends Authenticatable
         'access_profile_id',
         'phone',
         'is_active',
+        'invited_at',
     ];
 
     protected $hidden = [
@@ -41,6 +42,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => Role::class,
             'is_active' => 'boolean',
+            'invited_at' => 'datetime',
         ];
     }
 

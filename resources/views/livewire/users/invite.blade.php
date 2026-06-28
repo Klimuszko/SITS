@@ -91,4 +91,77 @@
             </div>
         </div>
     </form>
+
+    <section style="margin-top:28px">
+        <h2 style="margin:0 0 4px;font-size:18px">Oczekujące zaproszenia</h2>
+        <p class="muted" style="margin:0 0 14px;font-size:13px">
+            Konta z wysłanym zaproszeniem, które nie ustawiły jeszcze hasła ani nie zalogowały się przez SSO.
+            Link wygasa po {{ $inviteExpiryDays }} dniach.
+        </p>
+
+        @if ($copiedLink !== null)
+            <div class="alert" style="margin-bottom:14px;background:var(--c-amber-bg);color:var(--c-amber);border-color:#fde68a">
+                <strong>Link „ustaw hasło”</strong> (świeży, jednorazowy — skopiuj i przekaż ręcznie):
+                <input type="text" class="input" readonly value="{{ $copiedLink }}"
+                       onclick="this.select()" style="margin-top:8px;width:100%;font-family:monospace;font-size:12px">
+            </div>
+        @endif
+
+        <div class="card">
+            <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">E-mail</th>
+                        <th scope="col">Nazwa</th>
+                        <th scope="col">Organizacja</th>
+                        <th scope="col">Zaproszono</th>
+                        <th scope="col">Status</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @forelse ($pending as $p)
+                    <tr>
+                        <td class="muted">{{ $p->email }}</td>
+                        <td><strong>{{ $p->name }}</strong></td>
+                        <td class="muted">{{ $p->memberships->first()?->organization?->name ?? '—' }}</td>
+                        <td class="muted">{{ $p->invited_at->diffForHumans() }}</td>
+                        <td>
+                            @if ($p->invited_at->lt(now()->subDays($inviteExpiryDays)))
+                                <span class="badge badge--red">Wygasł</span>
+                            @else
+                                <span class="badge badge--amber">Oczekuje</span>
+                            @endif
+                        </td>
+                        <td style="text-align:right;white-space:nowrap">
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                    wire:click="copyInviteLink({{ $p->id }})"
+                                    wire:loading.attr="disabled" wire:target="copyInviteLink({{ $p->id }})">
+                                Kopiuj link
+                            </button>
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                    wire:click="resendInvitation({{ $p->id }})"
+                                    wire:loading.attr="disabled" wire:target="resendInvitation({{ $p->id }})">
+                                Wyślij ponownie
+                            </button>
+                            <button type="button" class="btn btn--danger btn--sm"
+                                    wire:click="deleteInvitation({{ $p->id }})"
+                                    wire:confirm="Usunąć to zaproszenie? Konto zostanie trwale usunięte, a e-mail zwolniony do ponownego zaproszenia.">
+                                Usuń
+                            </button>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6" class="table__empty">Brak oczekujących zaproszeń.</td></tr>
+                @endforelse
+                </tbody>
+            </table>
+            </div>
+
+            @if ($pending->hasPages())
+                {{ $pending->links() }}
+            @endif
+        </div>
+    </section>
 </div>
