@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\Sso;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirect;
 
@@ -37,7 +38,14 @@ class SsoController extends Controller
 
         try {
             $oauthUser = Socialite::driver($provider)->user();
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // Diagnostyka: prawdziwa przyczyna (np. AADSTS przy złym/wygasłym sekrecie)
+            // trafia do logów — komunikat dla użytkownika pozostaje ogólny.
+            Log::warning('SSO callback failed', [
+                'provider' => $provider,
+                'error' => $e->getMessage(),
+            ]);
+
             return $this->deny('Logowanie przez dostawcę nie powiodło się. Spróbuj ponownie.');
         }
 
